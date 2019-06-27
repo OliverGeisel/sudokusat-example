@@ -3,7 +3,7 @@ from typing import List, Tuple
 import math
 
 
-def input_source(path: str) -> Tuple[List[List[int]],int]:
+def input_source(path: str) -> Tuple[List[List[int]], int]:
     with open(path) as source:
         content = source.readlines()
     length = content[3].split()[2]  # line with length
@@ -27,15 +27,14 @@ def input_source(path: str) -> Tuple[List[List[int]],int]:
             if part == "" or part == "\n":
                 continue
             part = part.replace(" ", "")  # TODO Stringbuilder? improve
+            part = part.replace("__", "0")  # Find better replacement
+            part = part.replace("___", "0")
             part = part.replace("_", "0")
             data_line.extend(part)
-        data_line = list(map(lambda x: int(x), data_line))   # convert str to int
+        data_line = list(map(lambda x: int(x), data_line))  # convert str to int
         field_data.append(data_line)
     for line in field_data:
         for cell in line:
-            print(cell,end="")
+            print(cell, end="")
         print()
     return field_data, length
-
-
-

@@ -49,7 +49,7 @@ def one_value_per_cell_clause(row_count: int, cell_count: int, length: int) -> s
     return back
 
 
-def calc_clauses_for_cell_in_block(row_in_block, column_in_block, sqrt_of_length, start_row, start_column)->List[str]:
+def calc_clauses_for_cell_in_block(row_in_block, column_in_block, sqrt_of_length, start_row, start_column) -> List[str]:
     result = list()
     pos_in_block = (row_in_block - 1) * int(sqrt_of_length ** 2) + column_in_block
 
@@ -65,7 +65,7 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, sqrt_of_length
     return result
 
 
-def distinct_block_clauses(block_pos: List[int], length: int)->List[str]:
+def distinct_block_clauses(block_pos: List[int], length: int) -> List[str]:
     block_clauses = list()
     # for 1.1 1 will reached by     1.2 1.3 are not 1
     #                          2.1 2.2 2.3
@@ -88,16 +88,18 @@ def encode(input_string: str) -> None:
     file_name = input_string.split("/")[-1]
     output_file_name = copy(file_name).replace(".txt", ".cnf")
     path = copy(input_string).replace(file_name, "")
-    unit_clauses = list()
+
     clauses = list()
 
     # num_var = (10 ** (round(math.log(length, 10), 1))) ** 3
     num_var = int(str(length) * 3)  # TODO IMPROVE THE NUMBER
 
-    # add clauses for only one possible value in each cell
+    # add clauses for at least one possible value in each cell
+    one_per_cell_clauses = list()
+    unit_clauses = list()
     for row_count, row in enumerate(field):
         for cell_count, cell in enumerate(row):
-            clauses.append(one_value_per_cell_clause(row_count, cell_count, length))
+            one_per_cell_clauses.append(one_value_per_cell_clause(row_count, cell_count, length))
             # add known values to unit_clause
             if cell != 0:
                 unit_clauses.append(
@@ -105,28 +107,48 @@ def encode(input_string: str) -> None:
                                                                 value=cell))
 
     # add clauses for row distinction
+    row_clauses = list()
     for row in range(1, length + 1):
-        clauses.extend(distinct_column_clause(row, length))
+        row_clauses.extend(distinct_column_clause(row, length))
 
     # add clauses for column  distinction
+    column_clauses = list()
     for column in range(1, length + 1):
-        clauses.extend(distinct_column_clause(column, length))
+        column_clauses.extend(distinct_column_clause(column, length))
 
     # add clauses for block distinction
+    block_clauses = list()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
     cells_per_block = int(math.sqrt(length))
     for block in range(length):
         block_pos[0] = int(block / cells_per_block)
         block_pos[1] = block % cells_per_block
-        clauses.extend(distinct_block_clauses(block_pos, length))
+        block_clauses.extend(distinct_block_clauses(block_pos, length))
+
+    # add clauses for each cell has only one value
+    distinct_cell_clauses = list()
+    for row in range(1, length + 1):
+        for column in range(1, length + 1):
+            for value in range(1, length + 1):
+                for other in range(value + 1, length + 1):
+                    clause = "-{column}{row}{value} -{column}{row}{value2} 0\n". \
+                        format(column=column, row=row, value=value, value2=other)
+                    distinct_cell_clauses.append(clause)
+    # add clauses in specific order (by length)
+    clauses.extend(unit_clauses)
+    clauses.extend(distinct_cell_clauses)
+    clauses.extend(row_clauses)
+    clauses.extend(column_clauses)
+    clauses.extend(block_clauses)
+    clauses.extend(one_per_cell_clauses)
 
     # create first line of output_file
     num_clause = len(clauses)
     start_line = "p cnf {num_var} {num_clause}\n".format(num_var=num_var, num_clause=num_clause)
-    clauses.extend(unit_clauses)
     with open(path + output_file_name, "w")as output_file:
         output_file.write(start_line)
         output_file.writelines(clauses)
 
 
-encode("../../../examples/bsp-sudoku-input.txt")
+#encode("../../../examples/bsp-sudoku-input.txt")
+encode("../../../instances/table16-1.txt")
