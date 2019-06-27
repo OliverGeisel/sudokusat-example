@@ -26,10 +26,10 @@ def input_source(path: str) -> Tuple[List[List[int]], int]:
         for part in raw_data_line:
             if part == "" or part == "\n":
                 continue
-            part = part.replace(" ", "")  # TODO Stringbuilder? improve
             part = part.replace("__", "0")  # Find better replacement
             part = part.replace("___", "0")
             part = part.replace("_", "0")
+            part = part.replace(" ", "")  # TODO Stringbuilder? improve
             data_line.extend(part)
         data_line = list(map(lambda x: int(x), data_line))  # convert str to int
         field_data.append(data_line)

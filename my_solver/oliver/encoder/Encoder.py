@@ -34,7 +34,7 @@ def distinct_row_clause(row: int, length: int) -> List[str]:
     for left_column in range(1, length + 1):
         for right_column in range(left_column + 1, length + 1):
             for value in range(1, length + 1):
-                current = "-{column}{row}{value} -{column2}{row2}{value} 0\n". \
+                current = "-{column}{row}{value} -{column2}{row}{value} 0\n". \
                     format(column=left_column, row=row, value=value, column2=right_column)
                 back.append(current)
     return back
@@ -150,5 +150,5 @@ def encode(input_string: str) -> None:
         output_file.writelines(clauses)
 
 
-#encode("../../../examples/bsp-sudoku-input.txt")
-encode("../../../instances/table16-1.txt")
+encode("../../../examples/bsp-sudoku-input.txt")
+#encode("../../../instances/table16-1.txt")
