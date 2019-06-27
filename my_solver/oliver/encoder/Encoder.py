@@ -17,7 +17,7 @@ def distinct_column_clause(column: int, length: int) -> List[str]:
     for upper_row in range(1, length + 1):
         for lower_row in range(upper_row + 1, length + 1):
             for value in range(1, length + 1):
-                current = "-{column}{row}{value} -{column}{row2}{value} 0\n". \
+                current = "-{row}{column}{value} -{row2}{column}{value} 0\n". \
                     format(column=column, row=upper_row, value=value, row2=lower_row)
                 back.append(current)
     return back
@@ -34,7 +34,7 @@ def distinct_row_clause(row: int, length: int) -> List[str]:
     for left_column in range(1, length + 1):
         for right_column in range(left_column + 1, length + 1):
             for value in range(1, length + 1):
-                current = "-{column}{row}{value} -{column2}{row}{value} 0\n". \
+                current = "-{row}{column}{value} -{row}{column2}{value} 0\n". \
                     format(column=left_column, row=row, value=value, column2=right_column)
                 back.append(current)
     return back
@@ -44,7 +44,7 @@ def one_value_per_cell_clause(row_count: int, cell_count: int, length: int) -> s
     # TODO improve with format
     back = ""
     for i in range(length):
-        back += str(cell_count + 1) + str(row_count + 1) + str(i + 1) + " "
+        back += str(row_count + 1) + str(cell_count + 1) + str(i + 1) + " "
     back += "0\n"
     return back
 
@@ -58,7 +58,7 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, sqrt_of_length
             if (current_row - 1) * int(sqrt_of_length ** 2) + current_column <= pos_in_block:
                 continue
             for value in range(1, int(sqrt_of_length ** 2) + 1):
-                back = "-{column}{row}{value} -{column2}{row2}{value} 0\n" \
+                back = "-{row}{column}{value} -{row2}{column2}{value} 0\n" \
                     .format(column=column_in_block, row=row_in_block, value=value,
                             column2=current_column, row2=current_row)
                 result.append(back)
@@ -103,13 +103,13 @@ def encode(input_string: str) -> None:
             # add known values to unit_clause
             if cell != 0:
                 unit_clauses.append(
-                    "{cell_count}{row_count}{value} 0\n".format(row_count=row_count + 1, cell_count=cell_count + 1,
+                    "{row_count}{cell_count}{value} 0\n".format(row_count=row_count + 1, cell_count=cell_count + 1,
                                                                 value=cell))
 
     # add clauses for row distinction
     row_clauses = list()
     for row in range(1, length + 1):
-        row_clauses.extend(distinct_column_clause(row, length))
+        row_clauses.extend(distinct_row_clause(row, length))
 
     # add clauses for column  distinction
     column_clauses = list()
@@ -131,7 +131,7 @@ def encode(input_string: str) -> None:
         for column in range(1, length + 1):
             for value in range(1, length + 1):
                 for other in range(value + 1, length + 1):
-                    clause = "-{column}{row}{value} -{column}{row}{value2} 0\n". \
+                    clause = "-{row}{column}{value} -{row}{column}{value2} 0\n". \
                         format(column=column, row=row, value=value, value2=other)
                     distinct_cell_clauses.append(clause)
     # add clauses in specific order (by length)
@@ -142,7 +142,14 @@ def encode(input_string: str) -> None:
     clauses.extend(block_clauses)
     clauses.extend(one_per_cell_clauses)
 
+    for pos, clause in enumerate(clauses):
+        if 1 < clauses.count(clause):
+            clauses[pos] = "HIER IST WAS DOPPELT: " + clause
+    clause_set = set()
+    for i in clauses:
+        clause_set.add(i)
     # create first line of output_file
+    num = len(clause_set)
     num_clause = len(clauses)
     start_line = "p cnf {num_var} {num_clause}\n".format(num_var=num_var, num_clause=num_clause)
     with open(path + output_file_name, "w")as output_file:
@@ -151,4 +158,4 @@ def encode(input_string: str) -> None:
 
 
 encode("../../../examples/bsp-sudoku-input.txt")
-#encode("../../../instances/table16-1.txt")
+# encode("../../../instances/table16-1.txt")
