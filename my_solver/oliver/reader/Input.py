@@ -6,6 +6,7 @@ import math
 def input_source(path: str) -> Tuple[List[List[int]], int]:
     with open(path) as source:
         content = source.readlines()
+    info=content[0:3]
     length = content[3].split()[2]  # line with length
     length = int(length.split("x")[0])  # get concrete length of sudoku as int
     start_line = 5
@@ -37,4 +38,4 @@ def input_source(path: str) -> Tuple[List[List[int]], int]:
         for cell in line:
             print(cell, end="")
         print()
-    return field_data, length
+    return field_data, length, info
