@@ -1,4 +1,13 @@
+import sys
+
+from my_solver.oliver.reader.Input import input_source
+
+
+def main(*args):
+    puzzle_path = args[1]
+    =input_source(puzzle_path)
+
+
 if __name__ == "__main__":
     # run main code
-    pass
-    # input_source(sys.argv[1])
+    main(*sys.argv)

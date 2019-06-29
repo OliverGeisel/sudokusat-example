@@ -84,7 +84,7 @@ def distinct_block_clauses(block_pos: List[int], length: int) -> List[str]:
 
 
 def encode(input_string: str) -> None:
-    field, length = input_source(input_string)
+    field, length,info = input_source(input_string)
     file_name = input_string.split("/")[-1]
     output_file_name = copy(file_name).replace(".txt", ".cnf")
     path = copy(input_string).replace(file_name, "")
@@ -145,11 +145,6 @@ def encode(input_string: str) -> None:
     for pos, clause in enumerate(clauses):
         if 1 < clauses.count(clause):
             clauses[pos] = "HIER IST WAS DOPPELT: " + clause
-    clause_set = set()
-    for i in clauses:
-        clause_set.add(i)
-    # create first line of output_file
-    num = len(clause_set)
     num_clause = len(clauses)
     start_line = "p cnf {num_var} {num_clause}\n".format(num_var=num_var, num_clause=num_clause)
     with open(path + output_file_name, "w")as output_file:

@@ -1,18 +1,22 @@
 from typing import List, Tuple
 
-import math
+
+from my_solver.oliver.PuzzleInfo import PuzzleInfoType, PuzzleInfoInput
 
 
-def input_source(path: str) -> Tuple[List[List[int]], int]:
+def get_PuzzleInfo(infos: List[str]) -> PuzzleInfoType:
+    length = int((infos[3].split()[2]).split("x")[0])
+    back = PuzzleInfoInput(length, str.join("", infos))
+    return back
+
+
+def input_source(path: str) -> Tuple[List[List[int]], int, PuzzleInfoType]:
     with open(path) as source:
         content = source.readlines()
-    info=content[0:3]
-    length = content[3].split()[2]  # line with length
-    length = int(length.split("x")[0])  # get concrete length of sudoku as int
-    start_line = 5
-    end_line = start_line + length + int(math.sqrt(length))
-    field_raw = content[start_line:end_line]
-    for line in field_raw:  # remove split lines TODO improve the iteration
+    info = get_PuzzleInfo(content[0:4])
+    length = info.length  # line with length
+    field_raw = content[info.start_line:info.end_line]
+    for line in field_raw:  # remove split lines TODO improve the iteration  FILTER
         if line[0] == "+":
             field_raw.remove(line)
     for i in field_raw:
