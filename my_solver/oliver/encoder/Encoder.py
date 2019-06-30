@@ -1,15 +1,14 @@
-from copy import copy
 from typing import List
 
 import math
 
-from my_solver.oliver.reader.Input import input_source
+from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
 
 
 def distinct_column_clause(column: int, length: int) -> List[str]:
-    """
+    """  Create the clauses, that describe, that one column has every value exactly once
 
-    :param column: column that get the clauses
+    :param column: column that get the clauses.
     :param length: number of values from 1 to length
     :return: clauses for the column
     """
@@ -83,11 +82,15 @@ def distinct_block_clauses(block_pos: List[int], length: int) -> List[str]:
     return block_clauses
 
 
-def encode(input_string: str) -> None:
-    field, length,info = input_source(input_string)
-    file_name = input_string.split("/")[-1]
-    output_file_name = copy(file_name).replace(".txt", ".cnf")
-    path = copy(input_string).replace(file_name, "")
+def write_cnf_file(clauses, output_file, start_line):
+    with open(output_file, "w")as output_file:
+        output_file.write(start_line)
+        output_file.writelines(clauses)
+
+
+def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
+    info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
+    length = info.length
 
     clauses = list()
 
@@ -119,7 +122,7 @@ def encode(input_string: str) -> None:
     # add clauses for block distinction
     block_clauses = list()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
-    cells_per_block = int(math.sqrt(length))
+    cells_per_block = info_input.sqrt_of_length
     for block in range(length):
         block_pos[0] = int(block / cells_per_block)
         block_pos[1] = block % cells_per_block
@@ -141,16 +144,14 @@ def encode(input_string: str) -> None:
     clauses.extend(column_clauses)
     clauses.extend(block_clauses)
     clauses.extend(one_per_cell_clauses)
-
-    for pos, clause in enumerate(clauses):
-        if 1 < clauses.count(clause):
-            clauses[pos] = "HIER IST WAS DOPPELT: " + clause
+    # only to mark clauses, that are double
+    # for pos, clause in enumerate(clauses):
+    #     if 1 < clauses.count(clause):
+    #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
     num_clause = len(clauses)
-    start_line = "p cnf {num_var} {num_clause}\n".format(num_var=num_var, num_clause=num_clause)
-    with open(path + output_file_name, "w")as output_file:
-        output_file.write(start_line)
-        output_file.writelines(clauses)
+    start_line = "p cnf {num_var} {num_clause}\n" \
+        .format(num_var=num_var, num_clause=num_clause)
 
-
-encode("../../../examples/bsp-sudoku-input.txt")
-# encode("../../../instances/table16-1.txt")
+    output_file = info.output_file_complete_absolute()
+    write_cnf_file(clauses, output_file, start_line)
+    return info

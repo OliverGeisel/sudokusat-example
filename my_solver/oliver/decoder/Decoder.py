@@ -2,6 +2,8 @@ from typing import List
 
 import math
 
+from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfoEncode
+
 
 def fill_output_field(output_field: List[str], variables: List[str], length: int) -> None:
     line_start = "| "
@@ -32,7 +34,15 @@ def create_sep_line(length) -> str:
            + "+\n"
 
 
-def read_source(source_path: str) -> None:
+def decode(encode_info: PuzzleInfoEncode) -> None:
+    info = PuzzleInfoOutput(encode_info)
+    path = info.input_file_complete_absolute()
+    filled_sudoku = read_source(path)
+    write_solution_file(info, filled_sudoku)
+    pass
+
+
+def read_source(source_path: str) -> List[str]:
     with open(source_path) as solution:
         content = solution.readlines()
     #  remove 'v' and split string into single strings
@@ -43,15 +53,17 @@ def read_source(source_path: str) -> None:
     # get concrete values from variables
     output_field = list()
     fill_output_field(output_field, variables, length)
-
     # insert horizontal separator_lines for block
+    add_horizontal_lines(length, output_field)
+    return output_field
+
+
+def add_horizontal_lines(length, output_field):
     for i in range(int(math.sqrt(length)) + 1):
         output_field.insert(int(math.sqrt(length) + 1) * i, create_sep_line(length))
 
-    # write output_file
-    with open("../../../examples/bsp-sudoku-output2.txt", "w") as output:
-        output.writelines(info)
+
+def write_solution_file(info, output_field):
+    with open(info.output_file_complete_absolute(), "w") as output:
+        output.writelines(info.text)
         output.writelines(output_field)
-
-
-read_source("../../../examples/bsp-sudoku-SAT-sol.txt")
