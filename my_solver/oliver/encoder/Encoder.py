@@ -11,7 +11,7 @@ def convert_pos_into_var(pos: Position, length: int) -> str:
     Convert a position of the sudoku-field into a variable
 
     Example 5. row 4. column and value 9 in 9x9 Puzzle is in old 549
-    New it is 5*9*9+4*9+9
+    New it is 4*9*9+3*9+9
 
     :param pos:
     :param length:
@@ -32,10 +32,10 @@ def convert_var_into_pos(var: int, length: int) -> Position:
     """
     row = int(var / (length ** 2)) % length
     if row == 0:
-        row = length
+        row = length if var > length else 1
     column = int(var / length) % length
     if column == 0:
-        column = length
+        column = length if var > length else 1
     value = var % length
     if value == 0:
         value = length

@@ -15,5 +15,7 @@ class TestEncoder(TestCase):
 
     def test_convert_var_into_pos(self):
         pos = Position(5, 4, 8)
-        self.assertEqual(str(548), enc.convert_var_into_pos(449, 9).to_string())
+
+        self.assertEqual("548", enc.convert_var_into_pos(449, 9).to_string())
+        self.assertEqual("111", enc.convert_var_into_pos(1, 9).to_string())
         print(pos.to_string())
