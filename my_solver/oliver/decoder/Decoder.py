@@ -3,13 +3,15 @@ from typing import List
 import math
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfoEncode
+from my_solver.oliver.encoder.Encoder import convert_var_into_pos
 
 
 def fill_output_field(output_field: List[str], variables: List[str], length: int) -> None:
     line_start = "| "
     for count, var in enumerate(variables):
         count += 1
-        line_start += var[-1] + " "  # get last number(value)
+        pos = convert_var_into_pos(int(var), length)
+        line_start += str(pos.value) + " "  # get last number(value)
         if count % math.sqrt(length) == 0:
             line_start += "| "
         if count % length == 0:
@@ -50,7 +52,7 @@ def read_source(source_path: str) -> List[str]:
     # get only positive values
     # variables = [x for x in variables if int(x) > 0]
     variables = list(filter(lambda x: int(x) > 0, variables))
-    length = 9
+    length = 9  # TODO Info!!
     # get concrete values from variables
     output_field = list()
     fill_output_field(output_field, variables, length)
