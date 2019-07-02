@@ -48,6 +48,7 @@ def read_source(source_path: str) -> List[str]:
     #  remove 'v' and split string into single strings
     variables = content[-1].replace("v ", "").split()
     # get only positive values
+    # variables = [x for x in variables if int(x) > 0]
     variables = list(filter(lambda x: int(x) > 0, variables))
     length = 9
     # get concrete values from variables

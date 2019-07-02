@@ -3,6 +3,37 @@ from typing import List
 import math
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
+from my_solver.oliver.encoder.Position import Position
+
+
+def convert_pos_into_var(pos: Position, length: int) -> str:
+    """
+    Convert a position of the sudoku-field into a variable
+
+    Example 5. row 4. column and value 9 in 9x9 Puzzle is in old 549
+    New it is 5*9*9+4*9+9
+
+    :param pos:
+    :param length:
+    :return:
+    """
+    var = pos.row * (length ** 2) \
+          + pos.column * length \
+          + pos.value
+    return str(var)
+
+
+def convert_var_into_pos(var: int, length: int) -> Position:
+    row = int(var / (length ** 2)) % length
+    if row == 0:
+        row = length
+    column = int(var / length) % length
+    if column == 0:
+        column = length
+    value = var % length
+    if value == 0:
+        value = length
+    return Position(row, column, value)
 
 
 def distinct_column_clause(column: int, length: int) -> List[str]:

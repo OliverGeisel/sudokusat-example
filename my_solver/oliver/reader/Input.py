@@ -36,8 +36,10 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
             data_line.extend(part)
         data_line = list(map(lambda x: int(x), data_line))  # convert str to int
         field_data.append(data_line)
+    """
     for line in field_data:
         for cell in line:
             print(cell, end="")
         print()
+    """
     return field_data, info
