@@ -6,15 +6,15 @@ from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfoEncode
 from my_solver.oliver.encoder.Encoder import convert_var_into_pos
 
 
-def fill_output_field(output_field: List[str], variables: List[str], length: int) -> None:
+def fill_output_field(output_field: List[str], variables: List[str], info: PuzzleInfoOutput) -> None:
     line_start = "| "
     for count, var in enumerate(variables):
         count += 1
-        pos = convert_var_into_pos(int(var), length)
+        pos = convert_var_into_pos(int(var), info.length)
         line_start += str(pos.value) + " "  # get last number(value)
-        if count % math.sqrt(length) == 0:
+        if count % info.sqrt_of_length == 0:
             line_start += "| "
-        if count % length == 0:
+        if count % info.length == 0:
             line_start = line_start.strip()
             line_start += "\n"
             output_field.append(line_start)
@@ -39,12 +39,12 @@ def create_sep_line(length) -> str:
 def decode(encode_info: PuzzleInfoEncode) -> None:
     info = PuzzleInfoOutput(encode_info)
     path = info.input_file_complete_absolute()
-    filled_sudoku = read_source(path)
+    filled_sudoku = read_source(path, info)
     write_solution_file(info, filled_sudoku)
     pass
 
 
-def read_source(source_path: str) -> List[str]:
+def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
     with open(source_path) as solution:
         content = solution.readlines()
     #  remove 'v' and split string into single strings
@@ -52,18 +52,17 @@ def read_source(source_path: str) -> List[str]:
     # get only positive values
     # variables = [x for x in variables if int(x) > 0]
     variables = list(filter(lambda x: int(x) > 0, variables))
-    length = 9  # TODO Info!!
     # get concrete values from variables
     output_field = list()
-    fill_output_field(output_field, variables, length)
+    fill_output_field(output_field, variables, info)
     # insert horizontal separator_lines for block
-    add_horizontal_lines(length, output_field)
+    add_horizontal_lines(info, output_field)
     return output_field
 
 
-def add_horizontal_lines(length, output_field):
-    for i in range(int(math.sqrt(length)) + 1):
-        output_field.insert(int(math.sqrt(length) + 1) * i, create_sep_line(length))
+def add_horizontal_lines(info, output_field):
+    for i in range(info.sqrt_of_length + 1):
+        output_field.insert((info.sqrt_of_length + 1) * i, create_sep_line(info.length))
 
 
 def write_solution_file(info, output_field):
