@@ -23,7 +23,7 @@ class PuzzleInfoInput(PuzzleInfo):
     def __init__(self, path_of_file: str, length: int = 9, text: str = ""):
         super().__init__(path_of_file, length, text)
         self.start_line = 5  # depends on first line with '+'
-        self.end_line = self.start_line + length + int(math.sqrt(length))
+        self.end_line = self.start_line + length + self.sqrt_of_length
 
 
 class PuzzleInfoEncode(PuzzleInfo):
