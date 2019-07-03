@@ -11,7 +11,8 @@ def fill_output_field(output_field: List[str], variables: List[str], info: Puzzl
     for count, var in enumerate(variables):
         count += 1
         pos = convert_var_into_pos(int(var), info.length)
-        line_start += str(pos.value) + " "  # get last number(value)
+        fill = "" if pos.value > 9 else " "  # TODO will not work for size >= 100
+        line_start += fill + str(pos.value) + " "  # get last number(value)
         if count % info.sqrt_of_length == 0:
             line_start += "| "
         if count % info.length == 0:
