@@ -32,10 +32,6 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
             if part == "" or part == "|" or part == "\n":
                 continue
             part = "0" if part.__contains__("_") else part
-            # part = part.replace("___", "0")
-            # part = part.replace("__", "0")  # Find better replacement
-            # part = part.replace("_", "0")
-            # part = part.replace(" ", "")  # TODO Stringbuilder? improve
             data_line.append(part)
         data_line = list(map(lambda x: int(x), data_line))  # convert str to int
         field_data.append(data_line)

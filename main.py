@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
 import os
+import subprocess
 import sys
 import time
 
@@ -11,8 +12,9 @@ from my_solver.oliver.reader import Input
 
 def main(*args):
     puzzle_path = os.path.abspath(args[1])
-    # path_to_solver = os.path.abspath(args[2])
+    solver_name = args[2]
     rel_path = os.path.relpath(puzzle_path)
+
     start = time.perf_counter()
     field, info = Input.input_source(rel_path)
     end = time.perf_counter()
@@ -28,8 +30,14 @@ def main(*args):
     input("""DAS SIMULIERT RISS!
     bitte Riss selber ausführen
     Bitte Enter drücken""")
-    # input_file = encode_info.input_file_path + encode_info.output_file_name
-    # subprocess.run([path_to_solver, input_file, ">", output_file])
+    path_to_solver = ""
+    if solver_name == "riss":
+        path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/riss"))
+    else:
+        path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/clasp.exe"))
+    input_file = encode_info.output_file_complete_absolute()
+    output_file = encode_info.SAT_solution_file_complete_absolute()
+    subprocess.Popen(args=[path_to_solver, input_file, "> ".join(output_file)])
 
     start = time.perf_counter()
     Decoder.decode(encode_info)
