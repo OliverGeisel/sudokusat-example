@@ -37,7 +37,7 @@ def main(*args):
         path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/clasp.exe"))
     input_file = encode_info.output_file_complete_absolute()
     output_file = encode_info.SAT_solution_file_complete_absolute()
-    subprocess.Popen(args=[path_to_solver, input_file, "> ".join(output_file)])
+    # subprocess.Popen(args=[path_to_solver, input_file, "> ".join(output_file)])
 
     start = time.perf_counter()
     Decoder.decode(encode_info)

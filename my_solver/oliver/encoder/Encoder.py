@@ -46,11 +46,9 @@ def positions_to_str(first_pos: Position, second_pos: Position, length: int, fir
     # row2, column2, value2 = second_pos.get_tuple()
     sign1 = "" if first_positive else "-"
     sign2 = "" if second_positive else "-"
+    # Todo join() better?
     return "{sign1}{var1} {sign2}{var2} 0\n".format(sign1=sign1, var1=convert_pos_into_var(first_pos, length),
                                                     sign2=sign2, var2=convert_pos_into_var(second_pos, length))
-    # return "{sign1}{row1}{column1}{value1} {sign2}{row2}{column2}{value2} 0\n". \
-    #    format(sign1=sign1, column1=column1, row1=row1, value1=value1,
-    #           sign2=sign2, column2=column2, row2=row2, value2=value2)
 
 
 def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
@@ -69,8 +67,6 @@ def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
                 first_pos = Position(upper_row, column, value)
                 second_pos = Position(lower_row, column, value)
 
-                # current = "-{row}{column}{value} -{row2}{column}{value} 0\n". \
-                #     format(column=column, row=upper_row, value=value, row2=lower_row)
                 back.append(positions_to_str(first_pos, second_pos, info.length))
     return back
 
@@ -89,9 +85,6 @@ def distinct_row_clause(row: int, info: PuzzleInfoEncode) -> List[str]:
             for value in range(1, length + 1):
                 first_pos = Position(row, left_column, value)
                 second_pos = Position(row, right_column, value)
-
-                # current = "-{row}{column}{value} -{row}{column2}{value} 0\n". \
-                #     format(column=left_column, row=row, value=value, column2=right_column)
                 back.append(positions_to_str(first_pos, second_pos, info.length))
     return back
 
@@ -104,6 +97,17 @@ def one_value_per_cell_clause(row_count: int, cell_count: int, length: int) -> s
     literals.append("0\n")
     back = " ".join(literals)
     return back
+
+
+def exactly_one_value_per_cell(row: int, column: int, info: PuzzleInfoEncode) -> List[str]:
+    exactly_one_value_per_cell_clause = list()
+    for value in range(1, info.length + 1):
+        for other in range(value + 1, info.length + 1):
+            first_pos = Position(row, column, value)
+            second_pos = Position(row, column, other)
+            clause = positions_to_str(first_pos, second_pos, info.length)
+            exactly_one_value_per_cell_clause.append(clause)
+    return exactly_one_value_per_cell_clause
 
 
 def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleInfoEncode, start_row, start_column) -> \
@@ -127,7 +131,7 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
 
 def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List[str]:
     block_clauses = list()
-    # for 1.1 1 will reached by     1.2 1.3 are not 1
+    # for 1.1 1 will reached by    1.2 1.3 are not 1
     #                          2.1 2.2 2.3
     #                          3.1 3.2 3.3
     # same for 2 to 9
@@ -135,7 +139,7 @@ def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List
     sqrt_of_length = info.sqrt_of_length
     start_row = block_pos[0] * sqrt_of_length + 1
     start_column = block_pos[1] * sqrt_of_length + 1
-
+    # Todo parallel?
     # for one pos in block
     for line in range(start_row, start_row + sqrt_of_length):
         for cell in range(start_column, start_column + sqrt_of_length):
@@ -156,19 +160,26 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     # add clauses for at least one possible value in each cell
     one_per_cell_clauses = list()
     unit_clauses = list()
+    distinct_cell_clauses = list()
+
+    # Todo improve num of clause issue #4
     for row_count, row in enumerate(field):
         row_count += 1
         for cell_count, cell in enumerate(row):
             cell_count += 1
-            clause = one_value_per_cell_clause(row_count, cell_count, length)
-            one_per_cell_clauses.append(clause)
-            # add known values to unit_clause
             if cell != 0:
+                # add known values to unit_clause
                 pos = Position(row_count, cell_count, cell)
                 u_clause = convert_pos_into_var(pos, length)
                 unit_clauses.append(u_clause + " 0\n")
-                # "{row_count}{cell_count}{value} 0\n".format(row_count=row_count + 1, cell_count=cell_count + 1,
-                # value=cell))
+            else:
+                # if not known add at least and exactly one value clauses to formula
+                clause = one_value_per_cell_clause(row_count, cell_count, length)
+                one_per_cell_clauses.append(clause)
+                cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
+                distinct_cell_clauses.extend(cell_clauses)
+
+
 
     # add clauses for row distinction
     row_clauses = list()
@@ -189,18 +200,6 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
         block_pos[1] = block % cells_per_block
         block_clauses.extend(distinct_block_clauses(block_pos, info))
 
-    # add clauses for each cell has only one value
-    distinct_cell_clauses = list()
-    for row in range(1, length + 1):
-        for column in range(1, length + 1):
-            for value in range(1, length + 1):
-                for other in range(value + 1, length + 1):
-                    first_pos = Position(row, column, value)
-                    second_pos = Position(row, column, other)
-                    clause = positions_to_str(first_pos, second_pos, info.length)
-                    # clause = "-{row}{column}{value} -{row}{column}{value2} 0\n". \
-                    #    format(column=column, row=row, value=value, value2=other)
-                    distinct_cell_clauses.append(clause)
     # add clauses in specific order (by length)
     clauses = list()
     clauses.extend(unit_clauses)
