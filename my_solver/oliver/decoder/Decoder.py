@@ -50,7 +50,10 @@ def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
     with open(source_path) as solution:
         content = solution.readlines()
     #  remove 'v' and split string into single strings
-    # ToDo get s-line
+
+    satisfiable = list(filter(lambda x: x[0] == "s", content))[0]
+    if "SATISFIABLE".lower() not in satisfiable.lower():
+        write_solution_file(info, "NO Solution\n")
 
     # ToDo get all lines that starts with v
     variables = content[-1].replace("v ", "").split()
