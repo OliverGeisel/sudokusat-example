@@ -162,7 +162,6 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     unit_clauses = list()
     distinct_cell_clauses = list()
 
-    # Todo improve num of clause issue #4
     for row_count, row in enumerate(field):
         row_count += 1
         for cell_count, cell in enumerate(row):
@@ -178,8 +177,6 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
                 one_per_cell_clauses.append(clause)
                 cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
                 distinct_cell_clauses.extend(cell_clauses)
-
-
 
     # add clauses for row distinction
     row_clauses = list()

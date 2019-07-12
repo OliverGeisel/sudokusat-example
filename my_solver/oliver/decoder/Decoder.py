@@ -50,6 +50,9 @@ def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
     with open(source_path) as solution:
         content = solution.readlines()
     #  remove 'v' and split string into single strings
+    # ToDo get s-line
+
+    # ToDo get all lines that starts with v
     variables = content[-1].replace("v ", "").split()
     # get only positive values
     # variables = [x for x in variables if int(x) > 0]
