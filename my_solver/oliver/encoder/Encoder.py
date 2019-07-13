@@ -1,4 +1,5 @@
 import threading
+import time
 from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
@@ -199,7 +200,11 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
         .format(num_var=num_var, num_clause=num_clause)
 
     output_file = info.output_file_complete_absolute()
+    start = time.perf_counter()
     write_cnf_file(clauses, output_file, start_line)
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Time to write CNF-File: {time}s".format(time=time_to_encode))
     return info
 
 
@@ -221,9 +226,10 @@ def encode_parallel(field: List[List[int]], info_input: PuzzleInfoInput) -> Puzz
 
     thread_list = list()
 
-    arguments = [distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses]
-    thread_cell = threading.Thread(target=calc_cell_clauses, args=arguments)
-    thread_list.append(thread_cell)
+    # arguments = [distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses]
+    # thread_cell = threading.Thread(target=calc_cell_clauses, args=arguments)
+    # thread_list.append(thread_cell)
+    calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses)
 
     arguments = [info, length, row_clauses]
     thread_row = threading.Thread(target=calc_row_clauses, args=arguments)
@@ -237,11 +243,13 @@ def encode_parallel(field: List[List[int]], info_input: PuzzleInfoInput) -> Puzz
     thread_block = threading.Thread(target=calc_block_clauses, args=arguments)
     thread_list.append(thread_block)
 
-    for thread in thread_list:
+    for i, thread in enumerate(thread_list):
+        print("Thread " + str(i) + " started")
         thread.start()
 
-    for thread in thread_list:
+    for i, thread in enumerate(thread_list):
         thread.join()
+        print("Thread " + str(i) + " finish")
 
     # add clauses in specific order (by length)
     clauses = list()
@@ -263,28 +271,45 @@ def encode_parallel(field: List[List[int]], info_input: PuzzleInfoInput) -> Puzz
         .format(num_var=num_var, num_clause=num_clause)
 
     output_file = info.output_file_complete_absolute()
+    start = time.perf_counter()
     write_cnf_file(clauses, output_file, start_line)
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Time to write CNF-File: {time}s".format(time=time_to_encode))
     return info
 
 
 def calc_block_clauses(block_clauses, block_pos, cells_per_block, info, length):
+    start = time.perf_counter()
     for block in range(length):
         block_pos[0] = int(block / cells_per_block)
         block_pos[1] = block % cells_per_block
         block_clauses.extend(distinct_block_clauses(block_pos, info))
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Finish block! Time: " + str(time_to_encode))
 
 
 def calc_column_clauses(column_clauses, info, length):
+    start = time.perf_counter()
     for column in range(1, length + 1):
         column_clauses.extend(distinct_column_clause(column, info))
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Finish column! Time: " + str(time_to_encode))
 
 
 def calc_row_clauses(info, length, row_clauses):
+    start = time.perf_counter()
     for row in range(1, length + 1):
         row_clauses.extend(distinct_row_clause(row, info))
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Finish row! Time: " + str(time_to_encode))
 
 
 def calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses):
+    start = time.perf_counter()
     for row_count, row in enumerate(field):
         row_count += 1
         for cell_count, cell in enumerate(row):
@@ -300,3 +325,6 @@ def calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_c
                 one_per_cell_clauses.append(clause)
                 cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
                 distinct_cell_clauses.extend(cell_clauses)
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Finish cell! Time: " + str(time_to_encode))
