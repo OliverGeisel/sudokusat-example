@@ -38,7 +38,7 @@ def main(*args):
     input_file = encode_info.output_file_complete_absolute()
     output_file = encode_info.SAT_solution_file_complete_absolute()
     # subprocess.Popen(args=[path_to_solver, input_file, "> ".join(output_file)])
-
+    #
     start = time.perf_counter()
     Decoder.decode(encode_info)
     end = time.perf_counter()

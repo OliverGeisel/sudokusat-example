@@ -1,3 +1,4 @@
+import threading
 from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
@@ -162,40 +163,51 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     unit_clauses = list()
     distinct_cell_clauses = list()
 
-    for row_count, row in enumerate(field):
-        row_count += 1
-        for cell_count, cell in enumerate(row):
-            cell_count += 1
-            if cell != 0:
-                # add known values to unit_clause
-                pos = Position(row_count, cell_count, cell)
-                u_clause = convert_pos_into_var(pos, length)
-                unit_clauses.append(u_clause + " 0\n")
-            else:
-                # if not known add at least and exactly one value clauses to formula
-                clause = one_value_per_cell_clause(row_count, cell_count, length)
-                one_per_cell_clauses.append(clause)
-                cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
-                distinct_cell_clauses.extend(cell_clauses)
-
-    # add clauses for row distinction
     row_clauses = list()
-    for row in range(1, length + 1):
-        row_clauses.extend(distinct_row_clause(row, info))
-
-    # add clauses for column  distinction
     column_clauses = list()
-    for column in range(1, length + 1):
-        column_clauses.extend(distinct_column_clause(column, info))
 
-    # add clauses for block distinction
     block_clauses = list()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
     cells_per_block = info_input.sqrt_of_length
-    for block in range(length):
-        block_pos[0] = int(block / cells_per_block)
-        block_pos[1] = block % cells_per_block
-        block_clauses.extend(distinct_block_clauses(block_pos, info))
+    # Todo parallelize
+
+    thread_list = list()
+
+    arguments = [distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses]
+    thread_cell = threading.Thread(target=calc_cell_clauses, args=arguments)
+    thread_list.append(thread_cell)
+
+    arguments = [info, length, row_clauses]
+    thread_row = threading.Thread(target=calc_row_clauses, args=arguments)
+    thread_list.append(thread_row)
+
+    arguments = [column_clauses, info, length]
+    thread_column = threading.Thread(target=calc_column_clauses, args=arguments)
+    thread_list.append(thread_column)
+
+    arguments = [block_clauses, block_pos, cells_per_block, info, length]
+    thread_block = threading.Thread(target=calc_block_clauses, args=arguments)
+    thread_list.append(thread_block)
+
+    for thread in thread_list:
+        thread.start()
+
+    # calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses)
+
+    # add clauses for row distinction
+
+    # calc_row_clauses(info, length, row_clauses)
+
+    # add clauses for column  distinction
+
+    # calc_column_clauses(column_clauses, info, length)
+
+    # add clauses for block distinction
+
+    # calc_block_clauses(block_clauses, block_pos, cells_per_block, info, length)
+
+    for thread in thread_list:
+        thread.join()
 
     # add clauses in specific order (by length)
     clauses = list()
@@ -219,3 +231,38 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     output_file = info.output_file_complete_absolute()
     write_cnf_file(clauses, output_file, start_line)
     return info
+
+
+def calc_block_clauses(block_clauses, block_pos, cells_per_block, info, length):
+    for block in range(length):
+        block_pos[0] = int(block / cells_per_block)
+        block_pos[1] = block % cells_per_block
+        block_clauses.extend(distinct_block_clauses(block_pos, info))
+
+
+def calc_column_clauses(column_clauses, info, length):
+    for column in range(1, length + 1):
+        column_clauses.extend(distinct_column_clause(column, info))
+
+
+def calc_row_clauses(info, length, row_clauses):
+    for row in range(1, length + 1):
+        row_clauses.extend(distinct_row_clause(row, info))
+
+
+def calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses):
+    for row_count, row in enumerate(field):
+        row_count += 1
+        for cell_count, cell in enumerate(row):
+            cell_count += 1
+            if cell != 0:
+                # add known values to unit_clause
+                pos = Position(row_count, cell_count, cell)
+                u_clause = convert_pos_into_var(pos, length)
+                unit_clauses.append(u_clause + " 0\n")
+            else:
+                # if not known add at least and exactly one value clauses to formula
+                clause = one_value_per_cell_clause(row_count, cell_count, length)
+                one_per_cell_clauses.append(clause)
+                cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
+                distinct_cell_clauses.extend(cell_clauses)
