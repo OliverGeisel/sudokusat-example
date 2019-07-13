@@ -124,8 +124,6 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
             for value in range(1, int(sqrt_of_length ** 2) + 1):
                 first_pos = Position(row_in_block, column_in_block, value)
                 second_pos = Position(current_row, current_column, value)
-                # current = "-{row}{column}{value} -{row}{column2}{value} 0\n". \
-                #     format(column=left_column, row=row, value=value, column2=right_column)
                 result.append(positions_to_str(first_pos, second_pos, info.length))
     return result
 
@@ -169,7 +167,57 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     block_clauses = list()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
     cells_per_block = info_input.sqrt_of_length
-    # Todo parallelize
+
+    calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses)
+
+    # add clauses for row distinction
+    calc_row_clauses(info, length, row_clauses)
+
+    # add clauses for column  distinction
+    calc_column_clauses(column_clauses, info, length)
+
+    # add clauses for block distinction
+    calc_block_clauses(block_clauses, block_pos, cells_per_block, info, length)
+
+    # add clauses in specific order (by length)
+    clauses = list()
+    clauses.extend(unit_clauses)
+    clauses.extend(distinct_cell_clauses)
+    clauses.extend(row_clauses)
+    clauses.extend(column_clauses)
+    clauses.extend(block_clauses)
+    clauses.extend(one_per_cell_clauses)
+    # only to mark clauses, that are double
+    # for pos, clause in enumerate(clauses):
+    #     if 1 < clauses.count(clause):
+    #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
+
+    num_clause = len(clauses)
+    num_var = length ** 3
+
+    start_line = "p cnf {num_var} {num_clause}\n" \
+        .format(num_var=num_var, num_clause=num_clause)
+
+    output_file = info.output_file_complete_absolute()
+    write_cnf_file(clauses, output_file, start_line)
+    return info
+
+
+def encode_parallel(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
+    info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
+    length = info.length
+
+    # add clauses for at least one possible value in each cell
+    one_per_cell_clauses = list()
+    unit_clauses = list()
+    distinct_cell_clauses = list()
+
+    row_clauses = list()
+    column_clauses = list()
+
+    block_clauses = list()
+    block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
+    cells_per_block = info_input.sqrt_of_length
 
     thread_list = list()
 
@@ -191,20 +239,6 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
 
     for thread in thread_list:
         thread.start()
-
-    # calc_cell_clauses(distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses)
-
-    # add clauses for row distinction
-
-    # calc_row_clauses(info, length, row_clauses)
-
-    # add clauses for column  distinction
-
-    # calc_column_clauses(column_clauses, info, length)
-
-    # add clauses for block distinction
-
-    # calc_block_clauses(block_clauses, block_pos, cells_per_block, info, length)
 
     for thread in thread_list:
         thread.join()
