@@ -280,22 +280,22 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
     length = info.length
 
     # add clauses for at least one possible value in each cell
-    one_per_cell_clauses = list()
-    unit_clauses = list()
-    distinct_cell_clauses = list()
-
-    row_clauses = list()
-    column_clauses = list()
-
-    block_clauses = list()
 
     thread_list = list()
+    clauses = list()
+
+    p_one, one_per_cell_clauses = multiprocessing.Pipe()
+    p_unit, unit_clauses = multiprocessing.Pipe()
+    p_dist, distinct_cell_clauses = multiprocessing.Pipe()
+
+    p_row, row_clauses = multiprocessing.Pipe()
+    p_column, column_clauses = multiprocessing.Pipe()
+    p_block, block_clauses = multiprocessing.Pipe()
 
     # Todo name of thread
-    # arguments = [distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses]
-    # thread_cell = threading.Thread(target=calc_cell_clauses, args=arguments)
-    # thread_list.append(thread_cell)
-    calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info)
+    arguments = [distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info]
+    thread_cell = multiprocessing.Process(target=calc_cell_clauses, args=arguments)
+    thread_list.append(thread_cell)
 
     arguments = [row_clauses, info]
     thread_row = multiprocessing.Process(target=calc_row_clauses, args=arguments)
@@ -313,47 +313,79 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
         print("Thread " + str(i) + " started")
         thread.start()
 
+
+    # add clauses in specific order (by length)
+    clauses.extend(p_dist.recv())
+    clauses.extend(p_one.recv())
+    clauses.extend(p_unit.recv())
+
+    clauses.extend(p_row.recv())
+    clauses.extend(p_column.recv())
+    clauses.extend(p_block.recv())
     for i, thread in enumerate(thread_list):
         thread.join()
         print("Thread " + str(i) + " finish")
-
-    # add clauses in specific order (by length)
-    clauses = list()
-    clauses.extend(unit_clauses)
-    clauses.extend(distinct_cell_clauses)
-    clauses.extend(row_clauses)
-    clauses.extend(column_clauses)
-    clauses.extend(block_clauses)
-    clauses.extend(one_per_cell_clauses)
     # only to mark clauses, that are double
     # for pos, clause in enumerate(clauses):
     #     if 1 < clauses.count(clause):
     #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
-
     num_clause = len(clauses)
     num_var = length ** 3
-
+    print("Write")
     start_line = "p cnf {num_var} {num_clause}\n" \
         .format(num_var=num_var, num_clause=num_clause)
-
     output_file = info.output_file_complete_absolute()
     start = time.perf_counter()
-    write_cnf_file(clauses, output_file, start_line)
+    with open(output_file, "w")as output_file:
+        output_file.write(start_line)
+        output_file.writelines(clauses)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to write CNF-File: {time}s".format(time=time_to_encode))
     return info
 
 
+def writing_Process(block_clauses, clauses, column_clauses, distinct_cell_clauses, info, length, one_per_cell_clauses,
+                    row_clauses, unit_clauses):
+    print("Concat")
+    clauses.extend(unit_clauses.get())
+    clauses.extend(distinct_cell_clauses.get())
+    print("Concat")
+    clauses.extend(row_clauses.get())
+    clauses.extend(column_clauses.get())
+    print("Concat")
+    clauses.extend(block_clauses.get())
+    clauses.extend(one_per_cell_clauses.get())
+    # only to mark clauses, that are double
+    # for pos, clause in enumerate(clauses):
+    #     if 1 < clauses.count(clause):
+    #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
+    num_clause = len(clauses)
+    num_var = length ** 3
+    print("Write")
+    start_line = "p cnf {num_var} {num_clause}\n" \
+        .format(num_var=num_var, num_clause=num_clause)
+    output_file = info.output_file_complete_absolute()
+    start = time.perf_counter()
+    with open(output_file, "w")as output_file:
+        output_file.write(start_line)
+        output_file.writelines(clauses)
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Time to write CNF-File: {time}s".format(time=time_to_encode))
+
+
 def calc_block_clauses(block_clauses, info) -> None:
     start = time.perf_counter()
-
+    back = list()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
     cells_per_block = info.sqrt_of_length
     for block in range(info.length):
         block_pos[0] = int(block / cells_per_block)
         block_pos[1] = block % cells_per_block
-        block_clauses.extend(distinct_block_clauses(block_pos, info))
+        back.extend(distinct_block_clauses(block_pos, info))
+    block_clauses.send(back)
+    block_clauses.close()
 
     end = time.perf_counter()
     time_to_encode = end - start
@@ -362,10 +394,11 @@ def calc_block_clauses(block_clauses, info) -> None:
 
 def calc_column_clauses(column_clauses, info) -> None:
     start = time.perf_counter()
-
+    back = list()
     for column in range(1, info.length + 1):
-        column_clauses.extend(distinct_column_clause(column, info))
-
+        back.extend(distinct_column_clause(column, info))
+    column_clauses.send(back)
+    column_clauses.close()
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish column! Time: " + str(time_to_encode))
@@ -373,10 +406,11 @@ def calc_column_clauses(column_clauses, info) -> None:
 
 def calc_row_clauses(row_clauses, info) -> None:
     start = time.perf_counter()
-
+    back = list()
     for row in range(1, info.length + 1):
-        row_clauses.extend(distinct_row_clause(row, info))
-
+        back.extend(distinct_row_clause(row, info))
+    row_clauses.send(back)
+    row_clauses.close()
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish row! Time: " + str(time_to_encode))
@@ -400,6 +434,10 @@ def calc_row_clauses_parallel(row_clauses, info) -> None:
 
 def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info) -> None:
     start = time.perf_counter()
+    unit_clauses_temp = list()
+    one_per_cell_clauses_temp = list()
+    distinct_cell_clauses_temp = list()
+
     for row_count, row in enumerate(field):
         row_count += 1
         for cell_count, cell in enumerate(row):
@@ -408,13 +446,20 @@ def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses,
                 # add known values to unit_clause
                 pos = Position(row_count, cell_count, cell)
                 u_clause = convert_pos_into_var(pos, info)
-                unit_clauses.append(u_clause + " 0\n")
+                unit_clauses_temp.append(u_clause + " 0\n")
             else:
                 # if not known add at least and exactly one value clauses to formula
                 clause = one_value_per_cell_clause(row_count, cell_count, info)
-                one_per_cell_clauses.append(clause)
+                one_per_cell_clauses_temp.append(clause)
                 cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
-                distinct_cell_clauses.extend(cell_clauses)
+                distinct_cell_clauses_temp.extend(cell_clauses)
+    distinct_cell_clauses.send(distinct_cell_clauses_temp)
+    one_per_cell_clauses.send(one_per_cell_clauses_temp)
+    unit_clauses.send(unit_clauses_temp)
+    distinct_cell_clauses.close()
+    one_per_cell_clauses.close()
+    unit_clauses.close()
+
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish cell! Time: " + str(time_to_encode))
