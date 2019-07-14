@@ -282,7 +282,7 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
     # add clauses for at least one possible value in each cell
 
     thread_list = list()
-    clauses = list()
+    clauses = dict()
 
     p_one, one_per_cell_clauses = multiprocessing.Pipe()
     p_unit, unit_clauses = multiprocessing.Pipe()
@@ -313,23 +313,20 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
         print("Thread " + str(i) + " started")
         thread.start()
 
-
     # add clauses in specific order (by length)
-    clauses.extend(p_dist.recv())
-    clauses.extend(p_one.recv())
-    clauses.extend(p_unit.recv())
+    clauses["dist"] = p_dist.recv()
+    clauses["one"] = p_one.recv()
+    clauses["unit"] = p_unit.recv()
 
-    clauses.extend(p_row.recv())
-    clauses.extend(p_column.recv())
-    clauses.extend(p_block.recv())
-    for i, thread in enumerate(thread_list):
-        thread.join()
-        print("Thread " + str(i) + " finish")
+    clauses["row"] = p_row.recv()
+    clauses["column"] = p_column.recv()
+    clauses["block"] = p_block.recv()
+   
     # only to mark clauses, that are double
     # for pos, clause in enumerate(clauses):
     #     if 1 < clauses.count(clause):
     #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
-    num_clause = len(clauses)
+    num_clause = sum(map(lambda x: len(x),clauses.values()))
     num_var = length ** 3
     print("Write")
     start_line = "p cnf {num_var} {num_clause}\n" \
@@ -338,7 +335,14 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
     start = time.perf_counter()
     with open(output_file, "w")as output_file:
         output_file.write(start_line)
-        output_file.writelines(clauses)
+        output_file.writelines(clauses["unit"])
+        output_file.writelines(clauses["dist"])
+
+        output_file.writelines(clauses["row"])
+        output_file.writelines(clauses["column"])
+        output_file.writelines(clauses["block"])
+
+        output_file.writelines(clauses["one"])
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to write CNF-File: {time}s".format(time=time_to_encode))
