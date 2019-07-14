@@ -9,6 +9,7 @@ class PuzzleInfo:
         self.input_file_path, self.input_file_name = os.path.split(os.path.abspath(path_of_file))
         self.length = length  # values from 1 to length
         self.sqrt_of_length = int(math.sqrt(self.length))
+        self.square_of_length = length ** 2
         self.text = text  # further information
 
     def input_file_complete_absolute(self):

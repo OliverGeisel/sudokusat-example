@@ -19,8 +19,8 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
             field_raw.remove(line)
 
     # print field without separator
-    for i in field_raw:
-        print(i, end="")
+    # for i in field_raw:
+    #     print(i, end="")
 
     # Now get field in an array
     field_data = list()
@@ -31,11 +31,11 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
         for part in raw_data_line:
             if part == "" or part == "|" or part == "\n":
                 continue
-            part = "0" if part.__contains__("_") else part
+            part = "0" if "_" in part else part
             data_line.append(part)
         data_line = list(map(lambda x: int(x), data_line))  # convert str to int
         field_data.append(data_line)
-
+    """
     for line in field_data:
         for cell_count, cell in enumerate(line):
             cell_count += 1
@@ -43,5 +43,5 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
             if cell_count % info.sqrt_of_length == 0:
                 print("| ", end="")
         print()
-
+    """
     return field_data, info
