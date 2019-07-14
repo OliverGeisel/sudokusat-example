@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import threading
 import time
 from typing import List
@@ -114,22 +115,46 @@ def exactly_one_value_per_cell(row: int, column: int, info: PuzzleInfoEncode) ->
 
 def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleInfoEncode, start_row, start_column) -> \
         List[str]:
+    """
+    Get Clauses that encode that the cell(start_row,start_column) to be distinct from the other cells
+    :param row_in_block:
+    :param column_in_block:
+    :param info:
+    :param start_row:
+    :param start_column:
+    :return:
+    """
     result = list()
     sqrt_of_length = info.sqrt_of_length
-    pos_in_block = (row_in_block - 1) * int(sqrt_of_length ** 2) + column_in_block
-
+    first_cell_pos_in_block = (row_in_block - 1) * info.sqrt_of_length + column_in_block
+    # absolute row in puzzle
     for current_row in range(start_row, start_row + sqrt_of_length):
+        # absolute column in puzzle
+        if current_row <= start_row - 1 + row_in_block:
+            continue
         for current_column in range(start_column, start_column + sqrt_of_length):
-            if (current_row - 1) * int(sqrt_of_length ** 2) + current_column <= pos_in_block:
+            # skip if cell is behind the start_cell
+            second_cell_pos = ((current_row - 1) % sqrt_of_length) * sqrt_of_length \
+                              + (current_column - 1) % sqrt_of_length + 1
+            if second_cell_pos <= first_cell_pos_in_block:
                 continue
-            for value in range(1, int(sqrt_of_length ** 2) + 1):
-                first_pos = Position(row_in_block, column_in_block, value)
+            # skipp if cell is in same row OR column
+            if current_column == start_column - 1 + column_in_block:
+                continue
+            for value in range(1, info.length + 1):
+                first_pos = Position(start_row - 1 + row_in_block, start_column - 1 + column_in_block, value)
                 second_pos = Position(current_row, current_column, value)
                 result.append(positions_to_str(first_pos, second_pos, info))
     return result
 
 
 def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List[str]:
+    """
+    Calculate all clauses for one block in puzzle
+    :param block_pos: position of the block in puzzle
+    :param info: Information about the puzzle
+    :return: clauses for the block as string
+    """
     block_clauses = list()
     # for 1.1 1 will reached by    1.2 1.3 are not 1
     #                          2.1 2.2 2.3
@@ -139,11 +164,13 @@ def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List
     sqrt_of_length = info.sqrt_of_length
     start_row = block_pos[0] * sqrt_of_length + 1
     start_column = block_pos[1] * sqrt_of_length + 1
-    # Todo parallel?
     # for one pos in block
-    for line in range(start_row, start_row + sqrt_of_length):
+    for line in range(start_row, start_row + sqrt_of_length-1):
         for cell in range(start_column, start_column + sqrt_of_length):
-            block_clauses.extend(calc_clauses_for_cell_in_block(line, cell, info, start_row, start_column))
+            row_in_block = (line - 1) % sqrt_of_length + 1
+            column_in_block = (cell - 1) % sqrt_of_length + 1
+            block_clauses.extend(
+                calc_clauses_for_cell_in_block(row_in_block, column_in_block, info, start_row, start_column))
     return block_clauses
 
 
@@ -321,19 +348,15 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
     clauses["row"] = p_row.recv()
     clauses["column"] = p_column.recv()
     clauses["block"] = p_block.recv()
-   
-    # only to mark clauses, that are double
-    # for pos, clause in enumerate(clauses):
-    #     if 1 < clauses.count(clause):
-    #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
-    num_clause = sum(map(lambda x: len(x),clauses.values()))
+
+    num_clause = sum(map(lambda x: len(x), clauses.values()))
     num_var = length ** 3
     print("Write")
     start_line = "p cnf {num_var} {num_clause}\n" \
         .format(num_var=num_var, num_clause=num_clause)
-    output_file = info.output_file_complete_absolute()
+    output_file_name = info.output_file_complete_absolute()
     start = time.perf_counter()
-    with open(output_file, "w")as output_file:
+    with open(output_file_name, "w")as output_file:
         output_file.write(start_line)
         output_file.writelines(clauses["unit"])
         output_file.writelines(clauses["dist"])
@@ -343,50 +366,29 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
         output_file.writelines(clauses["block"])
 
         output_file.writelines(clauses["one"])
+        # only to mark clauses, that are double
+    with open(output_file_name)as to_check:
+        check = to_check.readlines()
+
+    for pos, clause in enumerate(clauses):
+        if 1 < check.count(clause):
+            check[pos] = "HIER IST WAS DOPPELT: " + clause
+    with open(os.path.join(info.output_file_path,"checkFile.txt"),"w") as checker:
+        checker.writelines(check)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to write CNF-File: {time}s".format(time=time_to_encode))
     return info
 
 
-def writing_Process(block_clauses, clauses, column_clauses, distinct_cell_clauses, info, length, one_per_cell_clauses,
-                    row_clauses, unit_clauses):
-    print("Concat")
-    clauses.extend(unit_clauses.get())
-    clauses.extend(distinct_cell_clauses.get())
-    print("Concat")
-    clauses.extend(row_clauses.get())
-    clauses.extend(column_clauses.get())
-    print("Concat")
-    clauses.extend(block_clauses.get())
-    clauses.extend(one_per_cell_clauses.get())
-    # only to mark clauses, that are double
-    # for pos, clause in enumerate(clauses):
-    #     if 1 < clauses.count(clause):
-    #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
-    num_clause = len(clauses)
-    num_var = length ** 3
-    print("Write")
-    start_line = "p cnf {num_var} {num_clause}\n" \
-        .format(num_var=num_var, num_clause=num_clause)
-    output_file = info.output_file_complete_absolute()
-    start = time.perf_counter()
-    with open(output_file, "w")as output_file:
-        output_file.write(start_line)
-        output_file.writelines(clauses)
-    end = time.perf_counter()
-    time_to_encode = end - start
-    print("Time to write CNF-File: {time}s".format(time=time_to_encode))
-
-
 def calc_block_clauses(block_clauses, info) -> None:
     start = time.perf_counter()
     back = list()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
-    cells_per_block = info.sqrt_of_length
+    blocks_in_row = info.sqrt_of_length
     for block in range(info.length):
-        block_pos[0] = int(block / cells_per_block)
-        block_pos[1] = block % cells_per_block
+        block_pos[0] = int(block / blocks_in_row)
+        block_pos[1] = block % blocks_in_row
         back.extend(distinct_block_clauses(block_pos, info))
     block_clauses.send(back)
     block_clauses.close()
@@ -415,22 +417,6 @@ def calc_row_clauses(row_clauses, info) -> None:
         back.extend(distinct_row_clause(row, info))
     row_clauses.send(back)
     row_clauses.close()
-    end = time.perf_counter()
-    time_to_encode = end - start
-    print("Finish row! Time: " + str(time_to_encode))
-
-
-def calc_row_clauses_parallel(row_clauses, info) -> None:
-    start = time.perf_counter()
-
-    thread_list = [None] * info.length
-    for i in range(1, info.length + 1):
-        thread_list[i - 1](threading.Thread(target=distinct_row_clause, args=[i, info]).start())
-        row_clauses.extend(distinct_row_clause(i, info))
-
-    for row in range(1, info.length + 1):
-        row_clauses.extend(distinct_row_clause(row, info))
-
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish row! Time: " + str(time_to_encode))
