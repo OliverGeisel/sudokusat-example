@@ -1,3 +1,4 @@
+import multiprocessing
 import threading
 import time
 from typing import List
@@ -220,6 +221,7 @@ def encode_parallel(field: List[List[int]], info_input: PuzzleInfoInput) -> Puzz
 
     thread_list = list()
 
+    # Todo name of thread
     # arguments = [distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses]
     # thread_cell = threading.Thread(target=calc_cell_clauses, args=arguments)
     # thread_list.append(thread_cell)
@@ -235,6 +237,76 @@ def encode_parallel(field: List[List[int]], info_input: PuzzleInfoInput) -> Puzz
 
     arguments = [block_clauses, info]
     thread_block = threading.Thread(target=calc_block_clauses, args=arguments)
+    thread_list.append(thread_block)
+
+    for i, thread in enumerate(thread_list):
+        print("Thread " + str(i) + " started")
+        thread.start()
+
+    for i, thread in enumerate(thread_list):
+        thread.join()
+        print("Thread " + str(i) + " finish")
+
+    # add clauses in specific order (by length)
+    clauses = list()
+    clauses.extend(unit_clauses)
+    clauses.extend(distinct_cell_clauses)
+    clauses.extend(row_clauses)
+    clauses.extend(column_clauses)
+    clauses.extend(block_clauses)
+    clauses.extend(one_per_cell_clauses)
+    # only to mark clauses, that are double
+    # for pos, clause in enumerate(clauses):
+    #     if 1 < clauses.count(clause):
+    #         clauses[pos] = "HIER IST WAS DOPPELT: " + clause
+
+    num_clause = len(clauses)
+    num_var = length ** 3
+
+    start_line = "p cnf {num_var} {num_clause}\n" \
+        .format(num_var=num_var, num_clause=num_clause)
+
+    output_file = info.output_file_complete_absolute()
+    start = time.perf_counter()
+    write_cnf_file(clauses, output_file, start_line)
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Time to write CNF-File: {time}s".format(time=time_to_encode))
+    return info
+
+
+def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
+    info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
+    length = info.length
+
+    # add clauses for at least one possible value in each cell
+    one_per_cell_clauses = list()
+    unit_clauses = list()
+    distinct_cell_clauses = list()
+
+    row_clauses = list()
+    column_clauses = list()
+
+    block_clauses = list()
+
+    thread_list = list()
+
+    # Todo name of thread
+    # arguments = [distinct_cell_clauses, field, info, length, one_per_cell_clauses, unit_clauses]
+    # thread_cell = threading.Thread(target=calc_cell_clauses, args=arguments)
+    # thread_list.append(thread_cell)
+    calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info)
+
+    arguments = [row_clauses, info]
+    thread_row = multiprocessing.Process(target=calc_row_clauses, args=arguments)
+    thread_list.append(thread_row)
+
+    arguments = [column_clauses, info]
+    thread_column = multiprocessing.Process(target=calc_column_clauses, args=arguments)
+    thread_list.append(thread_column)
+
+    arguments = [block_clauses, info]
+    thread_block = multiprocessing.Process(target=calc_block_clauses, args=arguments)
     thread_list.append(thread_block)
 
     for i, thread in enumerate(thread_list):
@@ -301,6 +373,22 @@ def calc_column_clauses(column_clauses, info) -> None:
 
 def calc_row_clauses(row_clauses, info) -> None:
     start = time.perf_counter()
+
+    for row in range(1, info.length + 1):
+        row_clauses.extend(distinct_row_clause(row, info))
+
+    end = time.perf_counter()
+    time_to_encode = end - start
+    print("Finish row! Time: " + str(time_to_encode))
+
+
+def calc_row_clauses_parallel(row_clauses, info) -> None:
+    start = time.perf_counter()
+
+    thread_list = [None] * info.length
+    for i in range(1, info.length + 1):
+        thread_list[i - 1](threading.Thread(target=distinct_row_clause, args=[i, info]).start())
+        row_clauses.extend(distinct_row_clause(i, info))
 
     for row in range(1, info.length + 1):
         row_clauses.extend(distinct_row_clause(row, info))
