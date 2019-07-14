@@ -58,7 +58,7 @@ def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
         content = solution.readlines()
 
     satisfiable = [x for x in content if x[0] == "s"][0]
-    if "SATISFIABLE".lower() not in satisfiable.lower():
+    if "UNSATISFIABLE".lower() in satisfiable.lower():
         write_solution_file(info, "NO Solution\n")
         raise UnsatisfiableException
 

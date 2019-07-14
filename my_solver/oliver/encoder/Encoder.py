@@ -165,7 +165,7 @@ def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List
     start_row = block_pos[0] * sqrt_of_length + 1
     start_column = block_pos[1] * sqrt_of_length + 1
     # for one pos in block
-    for line in range(start_row, start_row + sqrt_of_length-1):
+    for line in range(start_row, start_row + sqrt_of_length - 1):
         for cell in range(start_column, start_column + sqrt_of_length):
             row_in_block = (line - 1) % sqrt_of_length + 1
             column_in_block = (cell - 1) % sqrt_of_length + 1
@@ -373,7 +373,7 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
     for pos, clause in enumerate(clauses):
         if 1 < check.count(clause):
             check[pos] = "HIER IST WAS DOPPELT: " + clause
-    with open(os.path.join(info.output_file_path,"checkFile.txt"),"w") as checker:
+    with open(os.path.join(info.output_file_path, "checkFile.txt"), "w") as checker:
         checker.writelines(check)
     end = time.perf_counter()
     time_to_encode = end - start
@@ -437,6 +437,11 @@ def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses,
                 pos = Position(row_count, cell_count, cell)
                 u_clause = convert_pos_into_var(pos, info)
                 unit_clauses_temp.append(u_clause + " 0\n")
+                for i in range(1, info.length + 1):
+                    if i == cell:
+                        continue
+                    pos.value = i
+                    unit_clauses_temp.append("-{var} 0\n".format(var=convert_pos_into_var(pos, info)))
             else:
                 # if not known add at least and exactly one value clauses to formula
                 clause = one_value_per_cell_clause(row_count, cell_count, info)
