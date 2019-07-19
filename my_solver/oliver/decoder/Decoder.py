@@ -15,7 +15,7 @@ def fill_output_field(output_field: List[str], variables: List[str], info: Puzzl
     width = math.ceil(math.log(info.length, 10))
     for count, var in enumerate(variables):
         count += 1
-        pos = convert_var_into_pos(int(var), info.length)
+        pos = convert_var_into_pos(int(var), info)
 
         line_start += "{:>{width}}".format(str(pos.value), width=width) + " "  # get last number(value)
         if count % info.sqrt_of_length == 0:

@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 import threading
 import time
 from typing import List
@@ -8,7 +7,7 @@ from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
 from my_solver.oliver.encoder.Position import Position
 
 
-def convert_pos_into_var(pos: Position, info: PuzzleInfoEncode) -> str:
+def convert_pos_into_var(pos: Position) -> int:
     """
     Convert a position of the sudoku-field into a variable
 
@@ -16,23 +15,28 @@ def convert_pos_into_var(pos: Position, info: PuzzleInfoEncode) -> str:
     New it is 4*9*9+3*9+9
 
     :param pos:
-    :param info:
     :return:
     """
-    var = (pos.row - 1) * info.square_of_length \
-          + (pos.column - 1) * info.length \
+    var = (pos.row - 1) * pos.info.square_of_length \
+          + (pos.column - 1) * pos.info.length \
           + pos.value
-    return str(var)
+    return var
 
 
-def convert_var_into_pos(var: int, length: int) -> Position:
+def convert_pos_int_var_as_str(pos: Position) -> str:
+    return str(convert_pos_into_var(pos))
+
+
+def convert_var_into_pos(var: int, info: PuzzleInfoEncode) -> Position:
     """
 
     :param var:
-    :param length:
+    :param info:
     :return:
     """
-    row = int(var / (length ** 2)) % length
+    length = info.length
+
+    row = int(var / info.square_of_length) % length
     if row == 0:
         row = length if var > length else 1
     column = int(var / length) % length
@@ -41,18 +45,23 @@ def convert_var_into_pos(var: int, length: int) -> Position:
     value = var % length
     if value == 0:
         value = length
-    return Position(row, column, value)
+    return Position(info, row, column, value)
 
 
-def positions_to_str(first_pos: Position, second_pos: Position, info: PuzzleInfoEncode, first_positive: bool = False,
+def positions_to_str(first_pos: Position, second_pos: Position, first_positive: bool = False,
                      second_positive: bool = False) -> str:
-    # row1, column1, value1 = first_pos.get_tuple()
-    # row2, column2, value2 = second_pos.get_tuple()
+    if not first_positive and not second_positive:
+        positions_to_str_negative(first_pos, second_pos)
     sign1 = "" if first_positive else "-"
     sign2 = "" if second_positive else "-"
     # Todo join() better?
-    return "{sign1}{var1} {sign2}{var2} 0\n".format(sign1=sign1, var1=convert_pos_into_var(first_pos, info),
-                                                    sign2=sign2, var2=convert_pos_into_var(second_pos, info))
+    return "{sign1}{var1} {sign2}{var2} 0\n".format(sign1=sign1, var1=convert_pos_into_var(first_pos),
+                                                    sign2=sign2, var2=convert_pos_into_var(second_pos))
+
+
+def positions_to_str_negative(first_pos: Position, second_pos: Position) -> str:
+    return "-{var1} -{var2} 0\n".format(var1=convert_pos_into_var(first_pos),
+                                        var2=convert_pos_into_var(second_pos))
 
 
 def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
@@ -65,12 +74,16 @@ def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
 
     length = info.length
     back = list()
+    first_pos = Position(info, 0, column)
+    second_pos = Position(info, 0, column)
     for upper_row in range(1, length + 1):
+        first_pos.row = upper_row
         for lower_row in range(upper_row + 1, length + 1):
+            second_pos.row = lower_row
             for value in range(1, length + 1):
-                first_pos = Position(upper_row, column, value)
-                second_pos = Position(lower_row, column, value)
-                back.append(positions_to_str(first_pos, second_pos, info))
+                first_pos.value = value
+                second_pos.value = value
+                back.append(positions_to_str_negative(first_pos, second_pos, info))
     return back
 
 
@@ -83,32 +96,39 @@ def distinct_row_clause(row: int, info: PuzzleInfoEncode) -> List[str]:
     """
     length = info.length
     back = list()
+    first_pos = Position(info, row, 0)
+    second_pos = Position(info, row, 0)
     for left_column in range(1, length + 1):
+        first_pos.column = left_column
         for right_column in range(left_column + 1, length + 1):
+            second_pos.column = right_column
             for value in range(1, length + 1):
-                first_pos = Position(row, left_column, value)
-                second_pos = Position(row, right_column, value)
-                back.append(positions_to_str(first_pos, second_pos, info))
+                first_pos.value = value
+                second_pos.value = value
+                back.append(positions_to_str_negative(first_pos, second_pos))
     return back
 
 
 def one_value_per_cell_clause(row_count: int, cell_count: int, info: PuzzleInfoEncode) -> str:
     literals = list()
+    pos = Position(info, row_count, cell_count)
     for i in range(1, info.length + 1):
-        pos = Position(row_count, cell_count, i)
-        literals.append(convert_pos_into_var(pos, info))
+        pos.value = i
+        literals.append(convert_pos_into_var(pos))
     literals.append("0\n")
-    back = " ".join(literals)
+    back = " ".join(str(literals))
     return back
 
 
 def exactly_one_value_per_cell(row: int, column: int, info: PuzzleInfoEncode) -> List[str]:
     exactly_one_value_per_cell_clause = list()
+    first_pos = Position(info, row, column)
+    second_pos = Position(info, row, column)
     for value in range(1, info.length + 1):
+        first_pos.value = value
         for other in range(value + 1, info.length + 1):
-            first_pos = Position(row, column, value)
-            second_pos = Position(row, column, other)
-            clause = positions_to_str(first_pos, second_pos, info)
+            second_pos.value = other
+            clause = positions_to_str_negative(first_pos, second_pos)
             exactly_one_value_per_cell_clause.append(clause)
     return exactly_one_value_per_cell_clause
 
@@ -127,12 +147,16 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
     result = list()
     sqrt_of_length = info.sqrt_of_length
     first_cell_pos_in_block = (row_in_block - 1) * info.sqrt_of_length + column_in_block
+    first_pos = Position(info, start_row - 1 + row_in_block, start_column - 1 + column_in_block)
+    second_pos = Position(info)
     # absolute row in puzzle
     for current_row in range(start_row, start_row + sqrt_of_length):
         # absolute column in puzzle
         if current_row <= start_row - 1 + row_in_block:
             continue
+        second_pos.row = current_row
         for current_column in range(start_column, start_column + sqrt_of_length):
+
             # skip if cell is behind the start_cell
             second_cell_pos = ((current_row - 1) % sqrt_of_length) * sqrt_of_length \
                               + (current_column - 1) % sqrt_of_length + 1
@@ -141,10 +165,11 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
             # skipp if cell is in same row OR column
             if current_column == start_column - 1 + column_in_block:
                 continue
+            second_pos.column = current_column
             for value in range(1, info.length + 1):
-                first_pos = Position(start_row - 1 + row_in_block, start_column - 1 + column_in_block, value)
-                second_pos = Position(current_row, current_column, value)
-                result.append(positions_to_str(first_pos, second_pos, info))
+                first_pos.value = value
+                second_pos.value = value
+                result.append(positions_to_str_negative(first_pos, second_pos))
     return result
 
 
@@ -425,20 +450,23 @@ def calc_row_clauses_p(row_clauses, info) -> None:
 
 def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info) -> None:
     start = time.perf_counter()
+    pos = Position(info)
     for row_count, row in enumerate(field):
         row_count += 1
+        pos.row = row_count
         for cell_count, cell in enumerate(row):
             cell_count += 1
+            pos.column = cell_count
             if cell != 0:
                 # add known values to unit_clause
-                pos = Position(row_count, cell_count, cell)
-                u_clause = convert_pos_into_var(pos, info)
+                pos.value = cell
+                u_clause = convert_pos_into_var(pos)
                 unit_clauses.append("{} 0\n".format(u_clause))
                 for i in range(1, info.length + 1):
                     if i == cell:
                         continue
                     pos.value = i
-                    unit_clauses.append("-{var} 0\n".format(var=convert_pos_into_var(pos, info)))
+                    unit_clauses.append("-{var} 0\n".format(var=convert_pos_into_var(pos)))
             else:
                 # if not known add at least and exactly one value clauses to formula
                 clause = one_value_per_cell_clause(row_count, cell_count, info)
@@ -462,14 +490,14 @@ def calc_cell_clauses_p(distinct_cell_clauses, one_per_cell_clauses, unit_clause
             cell_count += 1
             if cell != 0:
                 # add known values to unit_clause
-                pos = Position(row_count, cell_count, cell)
-                u_clause = convert_pos_into_var(pos, info)
+                pos = Position(info, row_count, cell_count, cell)
+                u_clause = convert_pos_into_var(pos)
                 unit_clauses_temp.append("{} 0\n".format(u_clause))
                 for i in range(1, info.length + 1):
                     if i == cell:
                         continue
                     pos.value = i
-                    unit_clauses_temp.append("-{var} 0\n".format(var=convert_pos_into_var(pos, info)))
+                    unit_clauses_temp.append("-{var} 0\n".format(var=convert_pos_into_var(pos)))
             else:
                 # if not known add at least and exactly one value clauses to formula
                 clause = one_value_per_cell_clause(row_count, cell_count, info)
