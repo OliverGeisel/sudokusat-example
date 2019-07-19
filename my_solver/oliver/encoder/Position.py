@@ -37,7 +37,7 @@ class Position:
 
     def set_value(self, value: int):
         temp = self.value
-        self.column = value
+        self.value = value
         self.var += value - temp
 
     def set_info(self, info):
