@@ -55,13 +55,13 @@ def positions_to_str(first_pos: Position, second_pos: Position, first_positive: 
     sign1 = "" if first_positive else "-"
     sign2 = "" if second_positive else "-"
     # Todo join() better?
-    return "{sign1}{var1} {sign2}{var2} 0\n".format(sign1=sign1, var1=convert_pos_into_var(first_pos),
-                                                    sign2=sign2, var2=convert_pos_into_var(second_pos))
+    return "{sign1}{var1} {sign2}{var2} 0\n".format(sign1=sign1, var1=first_pos.var,
+                                                    sign2=sign2, var2=second_pos.var)
 
 
 def positions_to_str_negative(first_pos: Position, second_pos: Position) -> str:
-    return "-{var1} -{var2} 0\n".format(var1=convert_pos_into_var(first_pos),
-                                        var2=convert_pos_into_var(second_pos))
+    return "-{var1} -{var2} 0\n".format(var1=first_pos.var,
+                                        var2=second_pos.var)
 
 
 def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
@@ -77,13 +77,13 @@ def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
     first_pos = Position(info, 0, column)
     second_pos = Position(info, 0, column)
     for upper_row in range(1, length + 1):
-        first_pos.row = upper_row
+        first_pos.set_row(upper_row)
         for lower_row in range(upper_row + 1, length + 1):
-            second_pos.row = lower_row
+            second_pos.set_row(lower_row)
             for value in range(1, length + 1):
-                first_pos.value = value
-                second_pos.value = value
-                back.append(positions_to_str_negative(first_pos, second_pos, info))
+                first_pos.set_value(value)
+                second_pos.set_value(value)
+                back.append(positions_to_str_negative(first_pos, second_pos))
     return back
 
 
@@ -99,12 +99,12 @@ def distinct_row_clause(row: int, info: PuzzleInfoEncode) -> List[str]:
     first_pos = Position(info, row, 0)
     second_pos = Position(info, row, 0)
     for left_column in range(1, length + 1):
-        first_pos.column = left_column
+        first_pos.set_column(left_column)
         for right_column in range(left_column + 1, length + 1):
-            second_pos.column = right_column
+            second_pos.set_column(right_column)
             for value in range(1, length + 1):
-                first_pos.value = value
-                second_pos.value = value
+                first_pos.set_value(value)
+                second_pos.set_value(value)
                 back.append(positions_to_str_negative(first_pos, second_pos))
     return back
 
@@ -113,7 +113,7 @@ def one_value_per_cell_clause(row_count: int, cell_count: int, info: PuzzleInfoE
     literals = list()
     pos = Position(info, row_count, cell_count)
     for i in range(1, info.length + 1):
-        pos.value = i
+        pos.set_value(i)
         literals.append(convert_pos_into_var(pos))
     literals.append("0\n")
     back = " ".join(str(literals))
@@ -125,9 +125,9 @@ def exactly_one_value_per_cell(row: int, column: int, info: PuzzleInfoEncode) ->
     first_pos = Position(info, row, column)
     second_pos = Position(info, row, column)
     for value in range(1, info.length + 1):
-        first_pos.value = value
+        first_pos.set_value(value)
         for other in range(value + 1, info.length + 1):
-            second_pos.value = other
+            second_pos.set_value(other)
             clause = positions_to_str_negative(first_pos, second_pos)
             exactly_one_value_per_cell_clause.append(clause)
     return exactly_one_value_per_cell_clause
@@ -154,7 +154,7 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
         # absolute column in puzzle
         if current_row <= start_row - 1 + row_in_block:
             continue
-        second_pos.row = current_row
+        second_pos.set_row(current_row)
         for current_column in range(start_column, start_column + sqrt_of_length):
 
             # skip if cell is behind the start_cell
@@ -165,10 +165,10 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
             # skipp if cell is in same row OR column
             if current_column == start_column - 1 + column_in_block:
                 continue
-            second_pos.column = current_column
+            second_pos.set_column(current_column)
             for value in range(1, info.length + 1):
-                first_pos.value = value
-                second_pos.value = value
+                first_pos.set_value(value)
+                second_pos.set_value(value)
                 result.append(positions_to_str_negative(first_pos, second_pos))
     return result
 
@@ -453,19 +453,19 @@ def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses,
     pos = Position(info)
     for row_count, row in enumerate(field):
         row_count += 1
-        pos.row = row_count
+        pos.set_row(row_count)
         for cell_count, cell in enumerate(row):
             cell_count += 1
-            pos.column = cell_count
+            pos.set_column(cell_count)
             if cell != 0:
                 # add known values to unit_clause
-                pos.value = cell
+                pos.set_value(cell)
                 u_clause = convert_pos_into_var(pos)
                 unit_clauses.append("{} 0\n".format(u_clause))
                 for i in range(1, info.length + 1):
                     if i == cell:
                         continue
-                    pos.value = i
+                    pos.set_value(i)
                     unit_clauses.append("-{var} 0\n".format(var=convert_pos_into_var(pos)))
             else:
                 # if not known add at least and exactly one value clauses to formula
@@ -496,7 +496,7 @@ def calc_cell_clauses_p(distinct_cell_clauses, one_per_cell_clauses, unit_clause
                 for i in range(1, info.length + 1):
                     if i == cell:
                         continue
-                    pos.value = i
+                    pos.set_value(i)
                     unit_clauses_temp.append("-{var} 0\n".format(var=convert_pos_into_var(pos)))
             else:
                 # if not known add at least and exactly one value clauses to formula

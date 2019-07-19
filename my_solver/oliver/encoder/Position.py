@@ -8,6 +8,13 @@ class Position:
         self.row = row  # starts by 1
         self.column = column  # starts by 1
         self.value = value  # starts by 1
+        self.var = self.update_var()
+
+    def update_var(self) -> str:
+        back = (self.row - 1) * self.info.square_of_length \
+               + (self.column - 1) * self.info.length \
+               + self.value
+        return back
 
     def to_string(self) -> str:
         return str(self.row) + str(self.column) + str(self.value)
@@ -17,3 +24,22 @@ class Position:
 
     def __eq__(self, other):
         return self.to_string() == other.to_string()
+
+    def set_row(self, row: int):
+        temp = self.row
+        self.row = row
+        self.var += (row - temp) * self.info.square_of_length
+
+    def set_column(self, column: int):
+        temp = self.column
+        self.column = column
+        self.var += (column - temp) * self.info.length
+
+    def set_value(self, value: int):
+        temp = self.value
+        self.column = value
+        self.var += value - temp
+
+    def set_info(self, info):
+        self.info = info
+        self.var = self.update_var()
