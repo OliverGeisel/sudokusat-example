@@ -4,16 +4,14 @@ from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
 from my_solver.oliver.encoder.Encoder import calc_cell_clauses, calc_row_clauses, calc_column_clauses, \
-    calc_block_clauses, write_cnf_file, convert_pos_into_var, one_value_per_cell_clause, exactly_one_value_per_cell, \
+    calc_block_clauses, write_cnf_file, one_value_per_cell_clause, exactly_one_value_per_cell, \
     distinct_block_clauses, distinct_column_clause, distinct_row_clause
 from my_solver.oliver.encoder.Position import Position
 
 
-def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
+def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
     info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
     length = info.length
-
-    # add clauses for at least one possible value in each cell
 
     thread_list = list()
     clauses = dict()
@@ -69,6 +67,7 @@ def encode_parallel_p(field: List[List[int]], info_input: PuzzleInfoInput) -> Pu
     print("Time to write CNF-File: {time}s".format(time=time_to_encode))
     return info
 
+
 def calc_block_clauses_p(block_clauses, info) -> None:
     start = time.perf_counter()
     back = list()
@@ -97,7 +96,6 @@ def calc_column_clauses_p(column_clauses, info) -> None:
     print("Finish column! Time: " + str(time_to_encode))
 
 
-
 def calc_row_clauses_p(row_clauses, info) -> None:
     start = time.perf_counter()
     back = list()
@@ -123,13 +121,13 @@ def calc_cell_clauses_p(distinct_cell_clauses, one_per_cell_clauses, unit_clause
             if cell != 0:
                 # add known values to unit_clause
                 pos = Position(info, row_count, cell_count, cell)
-                u_clause = convert_pos_into_var(pos)
+                u_clause = pos.var
                 unit_clauses_temp.append("{} 0\n".format(u_clause))
                 for i in range(1, info.length + 1):
                     if i == cell:
                         continue
                     pos.set_value(i)
-                    unit_clauses_temp.append("-{var} 0\n".format(var=convert_pos_into_var(pos)))
+                    unit_clauses_temp.append("-{var} 0\n".format(var=pos.var))
             else:
                 # if not known add at least and exactly one value clauses to formula
                 clause = one_value_per_cell_clause(row_count, cell_count, info)

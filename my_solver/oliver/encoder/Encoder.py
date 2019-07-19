@@ -6,26 +6,6 @@ from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
 from my_solver.oliver.encoder.Position import Position
 
 
-def convert_pos_into_var(pos: Position) -> int:
-    """
-    Convert a position of the sudoku-field into a variable
-
-    Example 5. row 4. column and value 9 in 9x9 Puzzle is in old 549
-    New it is 4*9*9+3*9+9
-
-    :param pos:
-    :return:
-    """
-    var = (pos.row - 1) * pos.info.square_of_length \
-          + (pos.column - 1) * pos.info.length \
-          + pos.value
-    return var
-
-
-def convert_pos_int_var_as_str(pos: Position) -> str:
-    return str(convert_pos_into_var(pos))
-
-
 def convert_var_into_pos(var: int, info: PuzzleInfoEncode) -> Position:
     """
 
@@ -491,8 +471,6 @@ def calc_block_clauses_list(block_clauses, info) -> None:
     print("Finish block! Time: " + str(time_to_encode))
 
 
-
-
 def calc_column_clauses(column_clauses, info) -> None:
     start = time.perf_counter()
     for column in range(1, info.length + 1):
@@ -509,8 +487,6 @@ def calc_column_clauses_list(column_clauses, info) -> None:
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish column! Time: " + str(time_to_encode))
-
-
 
 
 def calc_row_clauses(row_clauses, info) -> None:
@@ -531,8 +507,6 @@ def calc_row_clauses_list(row_clauses, info) -> None:
     print("Finish row! Time: " + str(time_to_encode))
 
 
-
-
 def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info) -> None:
     start = time.perf_counter()
     pos = Position(info)
@@ -545,13 +519,13 @@ def calc_cell_clauses(distinct_cell_clauses, one_per_cell_clauses, unit_clauses,
             if cell != 0:
                 # add known values to unit_clause
                 pos.set_value(cell)
-                u_clause = convert_pos_into_var(pos)
+                u_clause = pos.var
                 unit_clauses.append("{} 0\n".format(u_clause))
                 for i in range(1, info.length + 1):
                     if i == cell:
                         continue
                     pos.set_value(i)
-                    unit_clauses.append("-{var} 0\n".format(var=convert_pos_into_var(pos)))
+                    unit_clauses.append("-{var} 0\n".format(var=pos.var))
             else:
                 # if not known add at least and exactly one value clauses to formula
                 clause = one_value_per_cell_clause(row_count, cell_count, info)
@@ -591,5 +565,3 @@ def calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_cla
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish cell! Time: " + str(time_to_encode))
-
-
