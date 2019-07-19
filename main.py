@@ -24,7 +24,7 @@ def main(*args):
 
     # encode_info = PuzzleInfoEncode(info.input_file_complete_absolute(), info.length, info.text)
     start = time.perf_counter()
-    encode_info = Encoder.encode(field, info)
+    encode_info = Encoder.encode_list(field, info)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to encode to SAT: {time}s".format(time=time_to_encode))
