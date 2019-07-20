@@ -4,7 +4,8 @@ from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode, PuzzleInfoInput
 from my_solver.oliver.encoder.Position import Position
-from my_solver.oliver.encoder.WriteCNFFile import write_cnf_file_list_join_interpolation_map
+from my_solver.oliver.encoder.WriteCNFFile import write_cnf_file_list_join_interpolation_map, binary_template_function, \
+    one_template_function, unit_template_function
 
 
 def distinct_column_clause_list(column: int, info: PuzzleInfoEncode) -> List[List[int]]:
@@ -247,13 +248,18 @@ def calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_cla
     print("Finish cell! Time: " + str(time_to_encode))
 
 
-def write_temp_file(clauses, info: PuzzleInfoEncode, name: str, template):
+def write_temp_file(clauses, info: PuzzleInfoEncode, name: str, template, clear_clauses: bool = True
+                    ) -> int:
+    back = len(clauses)
     path = os.path.join(info.input_file_path, name)
     info.temp_files.append(path)
     lines_to_write = list()
     with open(path, "w") as temp_file:
         lines_to_write.extend(template(clauses))
         temp_file.write("".join(lines_to_write))
+    if clear_clauses:
+        clauses.clear()
+    return back
 
 
 def write_cnf_from_parts(temp_files, output_file_name, start_line):
@@ -268,18 +274,7 @@ def write_cnf_from_parts(temp_files, output_file_name, start_line):
 
 def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
     info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
-
-    def unit_template_function(temp_clauses):
-        return [f"{'' if x[1] else '-'}{x[0]} 0\n" for x in temp_clauses]
-
-    def binary_template_function(temp_clauses):
-        return [f"-{x[0]} -{x[1]} 0\n" for x in temp_clauses]
-
-    def one_template_function(temp_clauses):
-        back = list()
-        for clause in temp_clauses:
-            back.append(f"{' '.join([str(x) for x in clause])} 0\n")
-        return back
+    clauses = dict()
 
     one_per_cell_clauses = list()
     unit_clauses = list()
@@ -296,40 +291,28 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
 
     # add clauses for at least one possible value in each cell
     calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info)
+    sum_of_clauses = 0
     if info.length >= 64:
-        write_temp_file(distinct_cell_clauses, info, "dist_cell.txt", binary_template_function)
-        distinct_cell_clauses.clear()
-        write_temp_file(one_per_cell_clauses, info, "one_cell.txt", one_template_function)
-        one_per_cell_clauses.clear()
-        write_temp_file(unit_clauses, info, "unit_cell.txt", unit_template_function)
-        unit_clauses.clear()
+        sum_of_clauses += write_temp_file(distinct_cell_clauses, info, "dist_cell.txt", binary_template_function)
+        sum_of_clauses += write_temp_file(one_per_cell_clauses, info, "one_cell.txt", one_template_function)
+        sum_of_clauses += write_temp_file(unit_clauses, info, "unit_cell.txt", unit_template_function)
 
     # add clauses for row distinction
     calc_row_clauses_list(row_clauses, row_one_clauses, info)
     if info.length >= 64:
-        write_temp_file(row_clauses, info, "row.txt", binary_template_function)
-        row_clauses.clear()
-        write_temp_file(row_one_clauses, info, "one_row.txt", one_template_function)
-        row_one_clauses.clear()
+        sum_of_clauses += write_temp_file(row_clauses, info, "row.txt", binary_template_function)
+        sum_of_clauses += write_temp_file(row_one_clauses, info, "one_row.txt", one_template_function)
     # add clauses for column  distinction
     calc_column_clauses_list(column_clauses, column_one_clause, info)
     if info.length >= 64:
-        write_temp_file(column_clauses, info, "column.txt", binary_template_function)
-        column_clauses.clear()
-        write_temp_file(column_one_clause, info, "one_column.txt", one_template_function)
-        column_one_clause.clear()
+        sum_of_clauses += write_temp_file(column_clauses, info, "column.txt", binary_template_function)
+        sum_of_clauses += write_temp_file(column_one_clause, info, "one_column.txt", one_template_function)
     # add clauses for block distinction
     calc_block_clauses_list(block_clauses, block_one_clauses, info)
     if info.length >= 64:
-        write_temp_file(block_clauses, info, "block.txt", binary_template_function)
-        block_clauses.clear()
-        write_temp_file(block_one_clauses, info, "one_block.txt", one_template_function)
-        block_one_clauses.clear()
-    if info.length >= 64:
-        # clean lists
-        pass
-    else:
-        clauses = dict()
+        sum_of_clauses += write_temp_file(block_clauses, info, "block.txt", binary_template_function)
+        sum_of_clauses += write_temp_file(block_one_clauses, info, "one_block.txt", one_template_function)
+    if info.length < 64:
         clauses["dist"] = distinct_cell_clauses
         clauses["one"] = one_per_cell_clauses
         clauses["unit"] = unit_clauses
@@ -343,7 +326,7 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
         clauses["block"] = block_clauses
         clauses["block_one"] = block_one_clauses
 
-    num_clause = sum([len(x) for x in clauses.values()]) if info.length < 64 else (64 ** 3) * 2
+    num_clause = sum([len(x) for x in clauses.values()]) if info.length < 64 else sum_of_clauses
     num_var = info.length * info.square_of_length
     start_line = f"p cnf {num_var} {num_clause}\n"
     output_file = info.output_file_complete_absolute()
