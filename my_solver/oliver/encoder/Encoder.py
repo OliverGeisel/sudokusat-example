@@ -15,12 +15,8 @@ def distinct_column_clause(column: int, info: PuzzleInfoEncode) -> List[str]:
     :param info: number of values from 1 to length
     :return: clauses for the column
     """
-    # TODO MAP()
-    back = list()
     clauses = distinct_column_clause_list(column, info)
-    for clause in clauses:
-        back.append("-%s -%s 0\n" % (clause[0], clause[1]))
-    return back
+    return [f"-{clause[0]} -{clause[1]} 0\n" for clause in clauses]
 
 
 def distinct_row_clause(row: int, info: PuzzleInfoEncode) -> List[str]:
@@ -30,12 +26,8 @@ def distinct_row_clause(row: int, info: PuzzleInfoEncode) -> List[str]:
     :param info: number of values from 1 to length
     :return: clauses for the row
     """
-    back = list()
     clauses = distinct_row_clause_list(row, info)
-    # TODO MAP()
-    for clause in clauses:
-        back.append("-%s -%s 0\n" % (clause[0], clause[1]))
-    return back
+    return [f"-{clause[0]} -{clause[1]} 0\n" for clause in clauses]
 
 
 def one_value_per_cell_clause(row_count: int, cell_count: int, info: PuzzleInfoEncode) -> str:
@@ -46,12 +38,8 @@ def one_value_per_cell_clause(row_count: int, cell_count: int, info: PuzzleInfoE
 
 
 def exactly_one_value_per_cell(row: int, column: int, info: PuzzleInfoEncode) -> List[str]:
-    back = list()
     clauses = exactly_one_value_per_cell_list(row, column, info)
-    # TODO MAP()
-    for clause in clauses:
-        back.append("-%s -%s 0\n" % (clause[0], clause[1]))
-    return back
+    return [f"-{clause[0]} -{clause[1]} 0\n" for clause in clauses]
 
 
 def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleInfoEncode, start_row, start_column) -> \
@@ -65,12 +53,8 @@ def calc_clauses_for_cell_in_block(row_in_block, column_in_block, info: PuzzleIn
     :param start_column:
     :return:
     """
-    back = list()
     clauses = calc_clauses_for_cell_in_block(row_in_block, column_in_block, info, start_row, start_column)
-    # TODO MAP()
-    for clause in clauses:
-        back.append("-%s -%s 0\n" % (clause[0], clause[1]))
-    return back
+    return [f"-{clause[0]} -{clause[1]} 0\n" for clause in clauses]
 
 
 def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List[str]:
@@ -80,12 +64,8 @@ def distinct_block_clauses(block_pos: List[int], info: PuzzleInfoEncode) -> List
     :param info: Information about the puzzle
     :return: clauses for the block as string
     """
-    back = list()
     clauses = distinct_block_clauses_list(block_pos, info)
-    # TODO MAP()
-    for clause in clauses:
-        back.append("-%s -%s 0\n" % (clause[0], clause[1]))
-    return back
+    return [f"-{clause[0]} -{clause[1]} 0\n" for clause in clauses]
 
 
 def calc_block_clauses(block_clauses, info) -> None:
