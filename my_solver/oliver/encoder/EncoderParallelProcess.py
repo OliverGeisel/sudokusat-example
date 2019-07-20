@@ -3,10 +3,10 @@ import time
 from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoInput, PuzzleInfoEncode
-from my_solver.oliver.encoder.Encoder import calc_cell_clauses, calc_row_clauses, calc_column_clauses, \
-    calc_block_clauses, write_cnf_file, one_value_per_cell_clause, exactly_one_value_per_cell, \
-    distinct_block_clauses, distinct_column_clause, distinct_row_clause
+from my_solver.oliver.encoder.EncoderList import distinct_column_clause_list, distinct_block_clauses_list, \
+    distinct_row_clause_list, one_value_per_cell_clause_list, exactly_one_value_per_cell_list
 from my_solver.oliver.encoder.Position import Position
+from my_solver.oliver.encoder.WriteCNFFile import write_cnf_file_list_join_interpolation_map
 
 
 def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
@@ -26,19 +26,19 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
 
     # Todo name of thread
     arguments = [distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info]
-    thread_cell = multiprocessing.Process(target=calc_cell_clauses, args=arguments)
+    thread_cell = multiprocessing.Process(target=calc_cell_clauses_p, args=arguments)
     thread_list.append(thread_cell)
 
     arguments = [row_clauses, info]
-    thread_row = multiprocessing.Process(target=calc_row_clauses, args=arguments)
+    thread_row = multiprocessing.Process(target=calc_row_clauses_p, args=arguments)
     thread_list.append(thread_row)
 
     arguments = [column_clauses, info]
-    thread_column = multiprocessing.Process(target=calc_column_clauses, args=arguments)
+    thread_column = multiprocessing.Process(target=calc_column_clauses_p, args=arguments)
     thread_list.append(thread_column)
 
     arguments = [block_clauses, info]
-    thread_block = multiprocessing.Process(target=calc_block_clauses, args=arguments)
+    thread_block = multiprocessing.Process(target=calc_block_clauses_p, args=arguments)
     thread_list.append(thread_block)
 
     for i, thread in enumerate(thread_list):
@@ -54,14 +54,12 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     clauses["column"] = p_column.recv()
     clauses["block"] = p_block.recv()
 
-    num_clause = sum(map(lambda x: len(x), clauses.values()))
-    num_var = length ** 3
-    print("Write")
-    start_line = "p cnf {num_var} {num_clause}\n" \
-        .format(num_var=num_var, num_clause=num_clause)
-    output_file_name = info.output_file_complete_absolute()
+    num_clause = sum([len(x) for x in clauses.values()])
+    num_var = info.length * info.square_of_length
+    start_line = f"p cnf {num_var} {num_clause}\n"
+    output_file = info.output_file_complete_absolute()
     start = time.perf_counter()
-    write_cnf_file(clauses, output_file_name, start_line)
+    write_cnf_file_list_join_interpolation_map(clauses, output_file, start_line)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to write CNF-File: {time}s".format(time=time_to_encode))
@@ -76,7 +74,7 @@ def calc_block_clauses_p(block_clauses, info) -> None:
     for block in range(info.length):
         block_pos[0] = int(block / blocks_in_row)
         block_pos[1] = block % blocks_in_row
-        back.extend(distinct_block_clauses(block_pos, info))
+        back.extend(distinct_block_clauses_list(block_pos, info))
     block_clauses.send(back)
     block_clauses.close()
     end = time.perf_counter()
@@ -88,7 +86,7 @@ def calc_column_clauses_p(column_clauses, info) -> None:
     start = time.perf_counter()
     back = list()
     for column in range(1, info.length + 1):
-        back.extend(distinct_column_clause(column, info))
+        back.extend(distinct_column_clause_list(column, info))
     column_clauses.send(back)
     column_clauses.close()
     end = time.perf_counter()
@@ -100,7 +98,7 @@ def calc_row_clauses_p(row_clauses, info) -> None:
     start = time.perf_counter()
     back = list()
     for row in range(1, info.length + 1):
-        back.extend(distinct_row_clause(row, info))
+        back.extend(distinct_row_clause_list(row, info))
     row_clauses.send(back)
     row_clauses.close()
     end = time.perf_counter()
@@ -130,9 +128,9 @@ def calc_cell_clauses_p(distinct_cell_clauses, one_per_cell_clauses, unit_clause
                     unit_clauses_temp.append("-{var} 0\n".format(var=pos.var))
             else:
                 # if not known add at least and exactly one value clauses to formula
-                clause = one_value_per_cell_clause(row_count, cell_count, info)
+                clause = one_value_per_cell_clause_list(row_count, cell_count, info)
                 one_per_cell_clauses_temp.append(clause)
-                cell_clauses = exactly_one_value_per_cell(row_count, cell_count, info)
+                cell_clauses = exactly_one_value_per_cell_list(row_count, cell_count, info)
                 distinct_cell_clauses_temp.extend(cell_clauses)
     distinct_cell_clauses.send(distinct_cell_clauses_temp)
     one_per_cell_clauses.send(one_per_cell_clauses_temp)
