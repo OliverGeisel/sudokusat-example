@@ -14,9 +14,10 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
         content = source.readlines()
     info = get_PuzzleInfo(path, content[0:4])
     field_raw = content[info.start_line:info.end_line]
-    for line in field_raw:  # remove split lines TODO improve the iteration  FILTER
-        if line[0] == "+":
-            field_raw.remove(line)
+    # for line in field_raw:  # remove split lines
+    #     if line[0] == "+":
+    #         field_raw.remove(line)
+    field_raw = [line for line in field_raw if line[0] != "+"]
 
     # print field without separator
     # for i in field_raw:

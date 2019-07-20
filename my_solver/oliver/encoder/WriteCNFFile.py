@@ -18,25 +18,14 @@ def write_cnf_file_list(clauses, output_file_name, start_line):
         lines_to_write = list()
         for clause in clauses["unit"]:
             lines_to_write.append("%s%s 0\n" % (("" if clause[1] else "-"), clause[0]))
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["dist"]:
             lines_to_write.append("-%s -%s 0\n" % (clause[0], clause[1]))
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["row"]:
             lines_to_write.append("-%s -%s 0\n" % (clause[0], clause[1]))
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["column"]:
             lines_to_write.append("-%s -%s 0\n" % (clause[0], clause[1]))
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["block"]:
             lines_to_write.append("-%s -%s 0\n" % (clause[0], clause[1]))
-        # output_file.writelines(lines_to_write)
-        #
-        # lines_to_write.clear()
         for clause in clauses["one"]:
             clause.append("0\n")
             clause = list(map(lambda x: str(x), clause))
@@ -72,8 +61,6 @@ def write_cnf_file_list_join(clauses, output_file_name, start_line):
             lines_to_write.append(minus)
             lines_to_write.append(str(clause[1]))
             lines_to_write.append(end)
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["column"]:
             lines_to_write.append(minus)
             lines_to_write.append(str(clause[0]))
@@ -81,8 +68,6 @@ def write_cnf_file_list_join(clauses, output_file_name, start_line):
             lines_to_write.append(minus)
             lines_to_write.append(str(clause[1]))
             lines_to_write.append(end)
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["block"]:
             lines_to_write.append(minus)
             lines_to_write.append(str(clause[0]))
@@ -90,8 +75,6 @@ def write_cnf_file_list_join(clauses, output_file_name, start_line):
             lines_to_write.append(minus)
             lines_to_write.append(str(clause[1]))
             lines_to_write.append(end)
-        # output_file.writelines(lines_to_write)
-        # lines_to_write.clear()
         for clause in clauses["one"]:
             clause = list(map(lambda x: str(x), clause))
             clause.append("0\n")
@@ -128,7 +111,6 @@ def write_cnf_file_list_join_interpolation_map(clauses, output_file_name, start_
     with open(output_file_name, "w")as output_file:
         lines_to_write = list()
         lines_to_write.append(start_line)
-
         lines_to_write.extend([f"{empty if x[1] else minus}{x[0]} 0\n" for x in clauses["unit"]])
         lines_to_write.extend([f"-{x[0]} -{x[1]} 0\n" for x in clauses["dist"]])
         lines_to_write.extend([f"-{x[0]} -{x[1]} 0\n" for x in clauses["row"]])

@@ -2,12 +2,33 @@ from typing import List
 
 import math
 
-from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfoEncode
-from my_solver.oliver.encoder.Encoder import convert_var_into_pos
+from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfo, PuzzleInfoEncode
+from my_solver.oliver.encoder.Position import Position
 
 
 class UnsatisfiableException(Exception):
     pass
+
+
+def convert_var_into_pos(var: int, info: PuzzleInfo) -> Position:
+    """
+
+    :param var:
+    :param info:
+    :return:
+    """
+    length = info.length
+
+    row = int(var / info.square_of_length) % length
+    if row == 0:
+        row = length if var > length else 1
+    column = int(var / length) % length
+    if column == 0:
+        column = length if var > length else 1
+    value = var % length
+    if value == 0:
+        value = length
+    return Position(info, row, column, value)
 
 
 def fill_output_field(output_field: List[str], variables: List[str], info: PuzzleInfoOutput) -> None:
@@ -27,20 +48,12 @@ def fill_output_field(output_field: List[str], variables: List[str], info: Puzzl
             line_start = "| "
 
 
-def create_sep_line(length) -> str:
-    cell_length = int(math.ceil(math.log(length, 10)))
+def create_sep_line(info: PuzzleInfo) -> str:
+    cell_length = int(math.ceil(math.log(info.length, 10)))
     start_separator = 1
-    sqrt_of_length = int(math.sqrt(length))
     separator_between_cells = 1
-    # ToDo join()?
-    return ("+"
-            + "-"
-            * (start_separator
-               + (sqrt_of_length
-                  * (cell_length
-                     + separator_between_cells)))) \
-           * sqrt_of_length \
-           + "+\n"
+    num_of_minus = (start_separator + (info.sqrt_of_length * (cell_length + separator_between_cells)))
+    return f'{("+" + "-" * num_of_minus) * info.sqrt_of_length}+\n'
 
 
 def decode(encode_info: PuzzleInfoEncode) -> None:
@@ -79,7 +92,7 @@ def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
 
 
 def add_horizontal_lines(info, output_field):
-    sep_line = create_sep_line(info.length)
+    sep_line = create_sep_line(info)
     for i in range(info.sqrt_of_length + 1):
         output_field.insert((info.sqrt_of_length + 1) * i, sep_line)
 
