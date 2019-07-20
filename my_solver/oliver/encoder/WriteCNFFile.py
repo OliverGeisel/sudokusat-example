@@ -118,5 +118,11 @@ def write_cnf_file_list_join_interpolation_map(clauses, output_file_name, start_
         lines_to_write.extend([f"-{x[0]} -{x[1]} 0\n" for x in clauses["block"]])
         for clause in clauses["one"]:
             lines_to_write.append(f"{' '.join([str(x) for x in clause])} 0\n")
+        for clause in clauses["row_one"]:
+            lines_to_write.append(f"{' '.join([str(x) for x in clause])} 0\n")
+        for clause in clauses["column_one"]:
+            lines_to_write.append(f"{' '.join([str(x) for x in clause])} 0\n")
+        for clause in clauses["block_one"]:
+            lines_to_write.append(f"{' '.join([str(x) for x in clause])} 0\n")
         write = "".join(lines_to_write)
         output_file.write(write)

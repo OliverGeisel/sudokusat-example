@@ -73,6 +73,50 @@ def exactly_one_value_per_cell_list(row: int, column: int, info: PuzzleInfoEncod
     return exactly_one_value_per_cell_clause
 
 
+def only_one_solution_per_row_clause_list(row: int, info: PuzzleInfoEncode) -> List[List[int]]:
+    back = list()
+    pos = Position(info, row)
+    for value in range(1, info.length + 1):
+        pos.set_value(value)
+        clause = list()
+        for column in range(1, info.length + 1):
+            pos.set_column(column)
+            clause.append(pos.var)
+        back.append(clause)
+    return back
+
+
+def only_one_solution_per_column_clause_list(column: int, info: PuzzleInfoEncode) -> List[List[int]]:
+    back = list()
+    pos = Position(info, column=column)
+    for value in info.values:
+        pos.set_value(value)
+        clause = list()
+        for row in info.values:
+            pos.set_row(row)
+            clause.append(pos.var)
+        back.append(clause)
+    return back
+
+
+def only_one_solution_per_block_clause_list(block_pos: List[int], info: PuzzleInfoEncode) -> List[List[int]]:
+    back = list()
+    sqrt_of_length = info.sqrt_of_length
+    start_row = block_pos[0] * sqrt_of_length + 1
+    start_column = block_pos[1] * sqrt_of_length + 1
+    pos = Position(info, start_row, start_column)
+    for value in info.values:
+        pos.set_value(value)
+        clause = list()
+        for row_in_block in range(start_row, start_row + sqrt_of_length):
+            pos.set_row(row_in_block)
+            for column_in_block in range(start_column, start_column + sqrt_of_length):
+                pos.set_column(column_in_block)
+                clause.append(pos.var)
+        back.append(clause)
+    return back
+
+
 def calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, info: PuzzleInfoEncode, start_row,
                                         start_column) -> \
         List[List[int]]:
@@ -139,7 +183,7 @@ def distinct_block_clauses_list(block_pos: List[int], info: PuzzleInfoEncode) ->
     return block_clauses
 
 
-def calc_block_clauses_list(block_clauses, info) -> None:
+def calc_block_clauses_list(block_clauses, block_one_clauses, info) -> None:
     start = time.perf_counter()
     block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
     blocks_in_row = info.sqrt_of_length
@@ -147,24 +191,27 @@ def calc_block_clauses_list(block_clauses, info) -> None:
         block_pos[0] = int(block / blocks_in_row)
         block_pos[1] = block % blocks_in_row
         block_clauses.extend(distinct_block_clauses_list(block_pos, info))
+        block_one_clauses.extend(only_one_solution_per_block_clause_list(block_pos, info))
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish block! Time: " + str(time_to_encode))
 
 
-def calc_column_clauses_list(column_clauses, info) -> None:
+def calc_column_clauses_list(column_clauses, column_one_clauses, info) -> None:
     start = time.perf_counter()
     for column in range(1, info.length + 1):
         column_clauses.extend(distinct_column_clause_list(column, info))
+        column_one_clauses.extend(only_one_solution_per_column_clause_list(column, info))
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish column! Time: " + str(time_to_encode))
 
 
-def calc_row_clauses_list(row_clauses, info) -> None:
+def calc_row_clauses_list(row_clauses, row_one_clauses, info) -> None:
     start = time.perf_counter()
     for row in range(1, info.length + 1):
         row_clauses.extend(distinct_row_clause_list(row, info))
+        row_one_clauses.extend(only_one_solution_per_row_clause_list(row, info))
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish row! Time: " + str(time_to_encode))
@@ -208,24 +255,35 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     distinct_cell_clauses = list()
 
     row_clauses = list()
+    row_one_clauses = list()
+
     column_clauses = list()
+    column_one_clause = list()
+
     block_clauses = list()
+    block_one_clauses = list()
     # add clauses for at least one possible value in each cell
     calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info)
     # add clauses for row distinction
-    calc_row_clauses_list(row_clauses, info)
+    calc_row_clauses_list(row_clauses, row_one_clauses, info)
     # add clauses for column  distinction
-    calc_column_clauses_list(column_clauses, info)
+    calc_column_clauses_list(column_clauses, column_one_clause, info)
     # add clauses for block distinction
-    calc_block_clauses_list(block_clauses, info)
+    calc_block_clauses_list(block_clauses, block_one_clauses, info)
 
     clauses = dict()
     clauses["dist"] = distinct_cell_clauses
     clauses["one"] = one_per_cell_clauses
     clauses["unit"] = unit_clauses
+
     clauses["row"] = row_clauses
+    clauses["row_one"] = row_one_clauses
+
     clauses["column"] = column_clauses
+    clauses["column_one"] = column_one_clause
+
     clauses["block"] = block_clauses
+    clauses["block_one"] = block_one_clauses
 
     num_clause = sum([len(x) for x in clauses.values()])
     num_var = info.length * info.square_of_length

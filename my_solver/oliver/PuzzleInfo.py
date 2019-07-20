@@ -11,6 +11,7 @@ class PuzzleInfo:
         self.sqrt_of_length = int(math.sqrt(self.length))
         self.square_of_length = length ** 2
         self.text = text  # further information
+        self.values = list(range(1, length + 1))
 
     def input_file_complete_absolute(self):
         return os.path.join(self.input_file_path, self.input_file_name)
