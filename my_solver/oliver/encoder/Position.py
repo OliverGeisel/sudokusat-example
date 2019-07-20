@@ -10,7 +10,7 @@ class Position:
         self.value = value  # starts by 1
         self.var = self.update_var()
 
-    def update_var(self) -> str:
+    def update_var(self) -> int:
         back = (self.row - 1) * self.info.square_of_length \
                + (self.column - 1) * self.info.length \
                + self.value

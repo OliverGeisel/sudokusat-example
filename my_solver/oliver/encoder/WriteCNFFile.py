@@ -1,3 +1,8 @@
+import os
+
+from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode
+
+
 def unit_template_function(temp_clauses):
     minus = "-"
     empty = ""
@@ -138,3 +143,27 @@ def write_cnf_file_list_join_interpolation_map(clauses, output_file_name, start_
 
         write = "".join(lines_to_write)
         output_file.write(write)
+
+
+def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, clear_clauses: bool = True
+                        ) -> int:
+    back = len(clauses)
+    path = os.path.join(info.input_file_path, name)
+    info.temp_files.append(path)
+    lines_to_write = list()
+    with open(path, "w") as temp_file:
+        lines_to_write.extend(template(clauses))
+        temp_file.write("".join(lines_to_write))
+    if clear_clauses:
+        clauses.clear()
+    return back
+
+
+def write_cnf_file_from_parts(temp_files, output_file_name, start_line):
+    with open(output_file_name, "w")as output_file:
+        lines_to_write = list()
+        lines_to_write.append(start_line)
+        for file in temp_files:
+            with open(file) as temp_file:
+                lines_to_write.append(temp_file.read())
+        output_file.write("".join(lines_to_write))

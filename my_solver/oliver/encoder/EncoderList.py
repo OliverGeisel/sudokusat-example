@@ -1,11 +1,11 @@
-import os
 import time
 from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode, PuzzleInfoInput
 from my_solver.oliver.encoder.Position import Position
-from my_solver.oliver.encoder.WriteCNFFile import write_cnf_file_list_join_interpolation_map, binary_template_function, \
-    one_template_function, unit_template_function
+from my_solver.oliver.encoder.WriteCNFFile import write_cnf_file_list_join_interpolation_map, \
+    binary_template_function, one_template_function, unit_template_function, write_temp_cnf_file, \
+    write_cnf_file_from_parts
 
 
 def distinct_column_clause_list(column: int, info: PuzzleInfoEncode) -> List[List[int]]:
@@ -19,11 +19,11 @@ def distinct_column_clause_list(column: int, info: PuzzleInfoEncode) -> List[Lis
     back = list()
     first_pos = Position(info, 0, column)
     second_pos = Position(info, 0, column)
-    for upper_row in range(1, length + 1):
+    for upper_row in info.values:
         first_pos.set_row(upper_row)
         for lower_row in range(upper_row + 1, length + 1):
             second_pos.set_row(lower_row)
-            for value in range(1, length + 1):
+            for value in info.values:
                 first_pos.set_value(value)
                 second_pos.set_value(value)
                 back.append([first_pos.var, second_pos.var])
@@ -41,11 +41,11 @@ def distinct_row_clause_list(row: int, info: PuzzleInfoEncode) -> List[List[int]
     back = list()
     first_pos = Position(info, row, 0)
     second_pos = Position(info, row, 0)
-    for left_column in range(1, length + 1):
+    for left_column in info.values:
         first_pos.set_column(left_column)
         for right_column in range(left_column + 1, length + 1):
             second_pos.set_column(right_column)
-            for value in range(1, length + 1):
+            for value in info.values:
                 first_pos.set_value(value)
                 second_pos.set_value(value)
                 back.append([first_pos.var, second_pos.var])
@@ -55,8 +55,8 @@ def distinct_row_clause_list(row: int, info: PuzzleInfoEncode) -> List[List[int]
 def one_value_per_cell_clause_list(row_count: int, cell_count: int, info: PuzzleInfoEncode) -> List[int]:
     literals = list()
     pos = Position(info, row_count, cell_count)
-    for i in range(1, info.length + 1):
-        pos.set_value(i)
+    for value in info.values:
+        pos.set_value(value)
         literals.append(pos.var)
     return literals
 
@@ -65,7 +65,7 @@ def exactly_one_value_per_cell_list(row: int, column: int, info: PuzzleInfoEncod
     exactly_one_value_per_cell_clause = list()
     first_pos = Position(info, row, column)
     second_pos = Position(info, row, column)
-    for value in range(1, info.length + 1):
+    for value in info.values:
         first_pos.set_value(value)
         for other in range(value + 1, info.length + 1):
             second_pos.set_value(other)
@@ -77,10 +77,10 @@ def exactly_one_value_per_cell_list(row: int, column: int, info: PuzzleInfoEncod
 def only_one_solution_per_row_clause_list(row: int, info: PuzzleInfoEncode) -> List[List[int]]:
     back = list()
     pos = Position(info, row)
-    for value in range(1, info.length + 1):
+    for value in info.values:
         pos.set_value(value)
         clause = list()
-        for column in range(1, info.length + 1):
+        for column in info.values:
             pos.set_column(column)
             clause.append(pos.var)
         back.append(clause)
@@ -119,8 +119,7 @@ def only_one_solution_per_block_clause_list(block_pos: List[int], info: PuzzleIn
 
 
 def calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, info: PuzzleInfoEncode, start_row,
-                                        start_column) -> \
-        List[List[int]]:
+                                        start_column) -> List[List[int]]:
     """
     Get Clauses that encode that the cell(start_row,start_column) to be distinct from the other cells
     :param row_in_block:
@@ -151,7 +150,7 @@ def calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, info: Puz
             if current_column == start_column - 1 + column_in_block:
                 continue
             second_pos.set_column(current_column)
-            for value in range(1, info.length + 1):
+            for value in info.values:
                 first_pos.set_value(value)
                 second_pos.set_value(value)
                 result.append([first_pos.var, second_pos.var])
@@ -200,7 +199,7 @@ def calc_block_clauses_list(block_clauses, block_one_clauses, info) -> None:
 
 def calc_column_clauses_list(column_clauses, column_one_clauses, info) -> None:
     start = time.perf_counter()
-    for column in range(1, info.length + 1):
+    for column in info.values:
         column_clauses.extend(distinct_column_clause_list(column, info))
         column_one_clauses.extend(only_one_solution_per_column_clause_list(column, info))
     end = time.perf_counter()
@@ -210,7 +209,7 @@ def calc_column_clauses_list(column_clauses, column_one_clauses, info) -> None:
 
 def calc_row_clauses_list(row_clauses, row_one_clauses, info) -> None:
     start = time.perf_counter()
-    for row in range(1, info.length + 1):
+    for row in info.values:
         row_clauses.extend(distinct_row_clause_list(row, info))
         row_one_clauses.extend(only_one_solution_per_row_clause_list(row, info))
     end = time.perf_counter()
@@ -232,10 +231,10 @@ def calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_cla
                 pos.set_value(cell)
                 u_clause = pos.var
                 unit_clauses.append([u_clause, 1])
-                for i in range(1, info.length + 1):
-                    if i == cell:
+                for value in info.values:
+                    if value == cell:
                         continue
-                    pos.set_value(i)
+                    pos.set_value(value)
                     unit_clauses.append([pos.var, 0])
             else:
                 # if not known add at least and exactly one value clauses to formula
@@ -246,30 +245,6 @@ def calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_cla
     end = time.perf_counter()
     time_to_encode = end - start
     print("Finish cell! Time: " + str(time_to_encode))
-
-
-def write_temp_file(clauses, info: PuzzleInfoEncode, name: str, template, clear_clauses: bool = True
-                    ) -> int:
-    back = len(clauses)
-    path = os.path.join(info.input_file_path, name)
-    info.temp_files.append(path)
-    lines_to_write = list()
-    with open(path, "w") as temp_file:
-        lines_to_write.extend(template(clauses))
-        temp_file.write("".join(lines_to_write))
-    if clear_clauses:
-        clauses.clear()
-    return back
-
-
-def write_cnf_from_parts(temp_files, output_file_name, start_line):
-    with open(output_file_name, "w")as output_file:
-        lines_to_write = list()
-        lines_to_write.append(start_line)
-        for file in temp_files:
-            with open(file) as temp_file:
-                lines_to_write.append(temp_file.read())
-        output_file.write("".join(lines_to_write))
 
 
 def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
@@ -293,25 +268,25 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
     calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info)
     sum_of_clauses = 0
     if info.length >= 64:
-        sum_of_clauses += write_temp_file(distinct_cell_clauses, info, "dist_cell.txt", binary_template_function)
-        sum_of_clauses += write_temp_file(one_per_cell_clauses, info, "one_cell.txt", one_template_function)
-        sum_of_clauses += write_temp_file(unit_clauses, info, "unit_cell.txt", unit_template_function)
+        sum_of_clauses += write_temp_cnf_file(distinct_cell_clauses, info, "dist_cell.txt", binary_template_function)
+        sum_of_clauses += write_temp_cnf_file(one_per_cell_clauses, info, "one_cell.txt", one_template_function)
+        sum_of_clauses += write_temp_cnf_file(unit_clauses, info, "unit_cell.txt", unit_template_function)
 
     # add clauses for row distinction
     calc_row_clauses_list(row_clauses, row_one_clauses, info)
     if info.length >= 64:
-        sum_of_clauses += write_temp_file(row_clauses, info, "row.txt", binary_template_function)
-        sum_of_clauses += write_temp_file(row_one_clauses, info, "one_row.txt", one_template_function)
+        sum_of_clauses += write_temp_cnf_file(row_clauses, info, "row.txt", binary_template_function)
+        sum_of_clauses += write_temp_cnf_file(row_one_clauses, info, "one_row.txt", one_template_function)
     # add clauses for column  distinction
     calc_column_clauses_list(column_clauses, column_one_clause, info)
     if info.length >= 64:
-        sum_of_clauses += write_temp_file(column_clauses, info, "column.txt", binary_template_function)
-        sum_of_clauses += write_temp_file(column_one_clause, info, "one_column.txt", one_template_function)
+        sum_of_clauses += write_temp_cnf_file(column_clauses, info, "column.txt", binary_template_function)
+        sum_of_clauses += write_temp_cnf_file(column_one_clause, info, "one_column.txt", one_template_function)
     # add clauses for block distinction
     calc_block_clauses_list(block_clauses, block_one_clauses, info)
     if info.length >= 64:
-        sum_of_clauses += write_temp_file(block_clauses, info, "block.txt", binary_template_function)
-        sum_of_clauses += write_temp_file(block_one_clauses, info, "one_block.txt", one_template_function)
+        sum_of_clauses += write_temp_cnf_file(block_clauses, info, "block.txt", binary_template_function)
+        sum_of_clauses += write_temp_cnf_file(block_one_clauses, info, "one_block.txt", one_template_function)
     if info.length < 64:
         clauses["dist"] = distinct_cell_clauses
         clauses["one"] = one_per_cell_clauses
@@ -333,7 +308,7 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
 
     start = time.perf_counter()
     if info.length >= 64:
-        write_cnf_from_parts(info.temp_files, output_file, start_line)
+        write_cnf_file_from_parts(info.temp_files, output_file, start_line)
     else:
         write_cnf_file_list_join_interpolation_map(clauses, output_file, start_line)
     end = time.perf_counter()
