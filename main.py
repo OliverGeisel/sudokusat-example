@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
 import os
-import subprocess
 import sys
 import time
 
-from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode
 from my_solver.oliver.decoder import Decoder
-from my_solver.oliver.encoder import Encoder
+from my_solver.oliver.encoder import EncoderList
 from my_solver.oliver.reader import Input
 
 
@@ -24,7 +22,7 @@ def main(*args):
 
     # encode_info = PuzzleInfoEncode(info.input_file_complete_absolute(), info.length, info.text)
     start = time.perf_counter()
-    encode_info = Encoder.encode_list(field, info)
+    encode_info = EncoderList.encode(field, info)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to encode to SAT: {time}s".format(time=time_to_encode))
