@@ -35,6 +35,7 @@ class PuzzleInfoEncode(PuzzleInfo):
         self.output_file_path = self.SAT_solution_file_path = self.input_file_path
         self.output_file_name = self.input_file_name.replace(".txt", ".cnf")
         self.SAT_solution_file_name = self.output_file_name.replace(".cnf", "-SAT-sol.txt")
+        self.temp_files = list()
 
     def __int__(self, info: PuzzleInfoInput):
         self.__init__(info.input_file_complete_absolute(), info.length, info.text)

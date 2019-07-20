@@ -1,3 +1,4 @@
+import os
 import time
 from typing import List
 
@@ -13,7 +14,6 @@ def distinct_column_clause_list(column: int, info: PuzzleInfoEncode) -> List[Lis
     :param info: number of values from 1 to length
     :return: clauses for the column as list
     """
-
     length = info.length
     back = list()
     first_pos = Position(info, 0, column)
@@ -247,8 +247,39 @@ def calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_cla
     print("Finish cell! Time: " + str(time_to_encode))
 
 
+def write_temp_file(clauses, info: PuzzleInfoEncode, name: str, template):
+    path = os.path.join(info.input_file_path, name)
+    info.temp_files.append(path)
+    lines_to_write = list()
+    with open(path, "w") as temp_file:
+        lines_to_write.extend(template(clauses))
+        temp_file.write("".join(lines_to_write))
+
+
+def write_cnf_from_parts(temp_files, output_file_name, start_line):
+    with open(output_file_name, "w")as output_file:
+        lines_to_write = list()
+        lines_to_write.append(start_line)
+        for file in temp_files:
+            with open(file) as temp_file:
+                lines_to_write.append(temp_file.read())
+        output_file.write("".join(lines_to_write))
+
+
 def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
     info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
+
+    def unit_template_function(temp_clauses):
+        return [f"{'' if x[1] else '-'}{x[0]} 0\n" for x in temp_clauses]
+
+    def binary_template_function(temp_clauses):
+        return [f"-{x[0]} -{x[1]} 0\n" for x in temp_clauses]
+
+    def one_template_function(temp_clauses):
+        back = list()
+        for clause in temp_clauses:
+            back.append(f"{' '.join([str(x) for x in clause])} 0\n")
+        return back
 
     one_per_cell_clauses = list()
     unit_clauses = list()
@@ -262,36 +293,66 @@ def encode(field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEnc
 
     block_clauses = list()
     block_one_clauses = list()
+
     # add clauses for at least one possible value in each cell
     calc_cell_clauses_list(distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field, info)
+    if info.length >= 64:
+        write_temp_file(distinct_cell_clauses, info, "dist_cell.txt", binary_template_function)
+        distinct_cell_clauses.clear()
+        write_temp_file(one_per_cell_clauses, info, "one_cell.txt", one_template_function)
+        one_per_cell_clauses.clear()
+        write_temp_file(unit_clauses, info, "unit_cell.txt", unit_template_function)
+        unit_clauses.clear()
+
     # add clauses for row distinction
     calc_row_clauses_list(row_clauses, row_one_clauses, info)
+    if info.length >= 64:
+        write_temp_file(row_clauses, info, "row.txt", binary_template_function)
+        row_clauses.clear()
+        write_temp_file(row_one_clauses, info, "one_row.txt", one_template_function)
+        row_one_clauses.clear()
     # add clauses for column  distinction
     calc_column_clauses_list(column_clauses, column_one_clause, info)
+    if info.length >= 64:
+        write_temp_file(column_clauses, info, "column.txt", binary_template_function)
+        column_clauses.clear()
+        write_temp_file(column_one_clause, info, "one_column.txt", one_template_function)
+        column_one_clause.clear()
     # add clauses for block distinction
     calc_block_clauses_list(block_clauses, block_one_clauses, info)
+    if info.length >= 64:
+        write_temp_file(block_clauses, info, "block.txt", binary_template_function)
+        block_clauses.clear()
+        write_temp_file(block_one_clauses, info, "one_block.txt", one_template_function)
+        block_one_clauses.clear()
+    if info.length >= 64:
+        # clean lists
+        pass
+    else:
+        clauses = dict()
+        clauses["dist"] = distinct_cell_clauses
+        clauses["one"] = one_per_cell_clauses
+        clauses["unit"] = unit_clauses
 
-    clauses = dict()
-    clauses["dist"] = distinct_cell_clauses
-    clauses["one"] = one_per_cell_clauses
-    clauses["unit"] = unit_clauses
+        clauses["row"] = row_clauses
+        clauses["row_one"] = row_one_clauses
 
-    clauses["row"] = row_clauses
-    clauses["row_one"] = row_one_clauses
+        clauses["column"] = column_clauses
+        clauses["column_one"] = column_one_clause
 
-    clauses["column"] = column_clauses
-    clauses["column_one"] = column_one_clause
+        clauses["block"] = block_clauses
+        clauses["block_one"] = block_one_clauses
 
-    clauses["block"] = block_clauses
-    clauses["block_one"] = block_one_clauses
-
-    num_clause = sum([len(x) for x in clauses.values()])
+    num_clause = sum([len(x) for x in clauses.values()]) if info.length < 64 else (64 ** 3) * 2
     num_var = info.length * info.square_of_length
     start_line = f"p cnf {num_var} {num_clause}\n"
     output_file = info.output_file_complete_absolute()
 
     start = time.perf_counter()
-    write_cnf_file_list_join_interpolation_map(clauses, output_file, start_line)
+    if info.length >= 64:
+        write_cnf_from_parts(info.temp_files, output_file, start_line)
+    else:
+        write_cnf_file_list_join_interpolation_map(clauses, output_file, start_line)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to write CNF-File: {time}s".format(time=time_to_encode))
