@@ -5,7 +5,7 @@ import sys
 import time
 
 from my_solver.oliver.decoder import Decoder
-from my_solver.oliver.encoder import EncoderList
+from my_solver.oliver.encoder.EncoderList import EncoderList
 from my_solver.oliver.reader import Input
 
 
@@ -22,7 +22,8 @@ def main(*args):
 
     # encode_info = PuzzleInfoEncode(info.input_file_complete_absolute(), info.length, info.text)
     start = time.perf_counter()
-    encode_info = EncoderList.encode(field, info)
+    encoder = EncoderList(None)
+    encode_info = encoder.encode(field, info)
     end = time.perf_counter()
     time_to_encode = end - start
     print("Time to encode to SAT: {time}s".format(time=time_to_encode))

@@ -2,6 +2,8 @@ from typing import List, Tuple
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoInput
 
+control = ["", "|", "\n"]
+
 
 def get_PuzzleInfo(file_path: str, infos: List[str]) -> PuzzleInfoInput:
     length = int((infos[3].split()[2]).split("x")[0])
@@ -30,11 +32,11 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
         raw_data_line = line.split()
         data_line = list()
         for part in raw_data_line:
-            if part == "" or part == "|" or part == "\n":
+            if part in control:
                 continue
             part = "0" if "_" in part else part
             data_line.append(part)
-        data_line = list(map(lambda x: int(x), data_line))  # convert str to int
+        data_line = [int(x) for x in data_line]  # convert str to int
         field_data.append(data_line)
     """
     for line in field_data:
