@@ -1,11 +1,13 @@
 import os
+import time
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode
 
+minus = "-"
+empty = ""
+
 
 def unit_template_function(temp_clauses):
-    minus = "-"
-    empty = ""
     return [f"{empty if x[1] else minus}{x[0]} 0\n" for x in temp_clauses]
 
 
@@ -145,8 +147,8 @@ def write_cnf_file_list_join_interpolation_map(clauses, output_file_name, start_
         output_file.write(write)
 
 
-def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, clear_clauses: bool = True
-                        ) -> int:
+def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, clear_clauses: bool = True) -> int:
+    start = time.perf_counter()
     back = len(clauses)
     path = os.path.join(info.input_file_path, name)
     info.temp_files.append(path)
@@ -154,16 +156,19 @@ def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, cl
     with open(path, "w") as temp_file:
         lines_to_write.extend(template(clauses))
         temp_file.write("".join(lines_to_write))
-    if clear_clauses:
-        clauses.clear()
+    end = time.perf_counter()
+    # if clear_clauses:
+    #    del clauses[:]
+    print(f"Time to write {name}: {end - start}s.")
     return back
 
 
-def write_cnf_file_from_parts(temp_files, output_file_name, start_line):
+def write_cnf_file_from_parts(temp_files, output_file_name, start_line, *extra):
+    lines_to_write = [start_line]
+    for ex in extra:
+        lines_to_write.append(ex)
+    for file in temp_files:
+        with open(file) as temp_file:
+            lines_to_write.append(temp_file.read())
     with open(output_file_name, "w")as output_file:
-        lines_to_write = list()
-        lines_to_write.append(start_line)
-        for file in temp_files:
-            with open(file) as temp_file:
-                lines_to_write.append(temp_file.read())
         output_file.write("".join(lines_to_write))
