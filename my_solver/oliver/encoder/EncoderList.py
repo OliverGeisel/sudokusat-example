@@ -5,8 +5,9 @@ from typing import List
 from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode, PuzzleInfoInput, PuzzleInfo
 from my_solver.oliver.encoder.Position import Position
 from my_solver.oliver.encoder.WriteCNFFile import write_cnf_file_list_join_interpolation_map, \
-    binary_template_function, one_template_function, unit_template_function, write_temp_cnf_file, \
-    write_cnf_file_from_parts
+    write_cnf_file_from_parts, binary_template_function_delete as binary_template_function, \
+    unit_template_function_delete as unit_template_function, \
+    one_template_function_delete as one_template_function, write_temp_cnf_file_multiple
 
 
 class EncoderList:
@@ -257,50 +258,36 @@ class EncoderList:
         self.calc_cell_clauses_list(self.clauses["dist"], self.clauses["one"], self.clauses["unit"], field)
         sum_of_clauses = 0
         if self.info.length >= self.large_size:
-            sum_of_clauses += write_temp_cnf_file(self.clauses["unit"], self.info, "unit_cell.txt",
-                                                  unit_template_function)
-            del self.clauses["unit"]
-            sum_of_clauses += write_temp_cnf_file(self.clauses["dist"], self.info, "dist_cell.txt",
-                                                  binary_template_function)
-            del self.clauses["dist"]
-            sum_of_clauses += write_temp_cnf_file(self.clauses["one"], self.info, "one_cell.txt",
-                                                  one_template_function)
-            del self.clauses["one"]
+            extra = [[self.clauses["dist"], binary_template_function], [self.clauses["one"], one_template_function]]
+            sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["unit"], self.info, "cell.txt",
+                                                           unit_template_function, *extra)
 
         # add clauses for row distinction
         self.calc_row_clauses_list(self.clauses["row"], self.clauses["row_one"])
         if self.info.length >= self.large_size:
-            sum_of_clauses += write_temp_cnf_file(self.clauses["row"], self.info, "row.txt", binary_template_function)
-            del self.clauses["row"]
-
-            sum_of_clauses += write_temp_cnf_file(self.clauses["row_one"], self.info, "one_row.txt",
-                                                  one_template_function)
-            del self.clauses["row_one"]
+            sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["row"], self.info, "row.txt",
+                                                           binary_template_function,
+                                                           [self.clauses["row_one"], one_template_function])
 
         # add clauses for column  distinction
         self.calc_column_clauses_list(self.clauses["column"], self.clauses["column_one"])
         if self.info.length >= self.large_size:
-            sum_of_clauses += write_temp_cnf_file(self.clauses["column"], self.info, "column.txt",
-                                                  binary_template_function)
-            del self.clauses["column"]
-
-            sum_of_clauses += write_temp_cnf_file(self.clauses["column_one"], self.info, "one_column.txt",
-                                                  one_template_function)
-            del self.clauses["column_one"]
+            sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["column"], self.info, "column.txt",
+                                                           binary_template_function,
+                                                           [self.clauses["column_one"], one_template_function])
         block_str = list()
         block_one_str = list()
         extra = [block_str, block_one_str]
         # add clauses for block distinction
         self.calc_block_clauses_list(self.clauses["block"], self.clauses["block_one"])
         if self.info.length >= self.large_size:
-
             block_str.extend(binary_template_function(self.clauses["block"]))
             sum_of_clauses += len(self.clauses["block"])
             del self.clauses["block"]
             block_one_str.extend(one_template_function(self.clauses["block_one"]))
             sum_of_clauses += len(self.clauses["block_one"])
             del self.clauses["block_one"]
-
+            print("Finish block")
         num_clause = sum(
             [len(x) for x in self.clauses.values()]) if self.info.length < self.large_size else sum_of_clauses
         num_var = self.info.length * self.info.square_of_length

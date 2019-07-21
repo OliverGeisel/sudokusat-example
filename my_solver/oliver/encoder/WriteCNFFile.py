@@ -1,24 +1,48 @@
 import os
 import time
+from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoEncode
 
 minus = "-"
 empty = ""
+size_of_deletion = -256
 
 
 def unit_template_function(temp_clauses):
     return [f"{empty if x[1] else minus}{x[0]} 0\n" for x in temp_clauses]
 
 
+def unit_template_function_delete(temp_clauses: List[List[int]]):
+    back = list()
+    while temp_clauses:
+        back.extend([f"{empty if x[1] else minus}{x[0]} 0\n" for x in temp_clauses[size_of_deletion:]])
+        del temp_clauses[size_of_deletion:]
+    return back
+
+
 def binary_template_function(temp_clauses):
     return [f"-{x[0]} -{x[1]} 0\n" for x in temp_clauses]
 
 
-def one_template_function(temp_clauses):
+def binary_template_function_delete(temp_clauses: List[List[int]]):
     back = list()
-    for clause in temp_clauses:
-        back.append(f"{' '.join([str(x) for x in clause])} 0\n")
+    while temp_clauses:
+        back.extend([f"-{x[0]} -{x[1]} 0\n" for x in temp_clauses[size_of_deletion:]])
+        del temp_clauses[size_of_deletion:]
+    return back
+
+
+def one_template_function(temp_clauses):
+    return [f"{' '.join([str(literal) for literal in clause])} 0\n" for clause in temp_clauses]
+
+
+def one_template_function_delete(temp_clauses: List[List[int]]):
+    back = list()
+    while temp_clauses:
+        back.extend(
+            [f"{' '.join([str(literal) for literal in clause])} 0\n" for clause in temp_clauses[size_of_deletion:]])
+        del temp_clauses[size_of_deletion:]
     return back
 
 
@@ -127,23 +151,23 @@ def write_cnf_file_list_join_interpolation(clauses, output_file_name, start_line
 def write_cnf_file_list_join_interpolation_map(clauses, output_file_name, start_line):
     with open(output_file_name, "w")as output_file:
         lines_to_write = list()
-        lines_to_write.append(start_line)
-        lines_to_write.extend(unit_template_function(clauses["unit"]))
-        lines_to_write.extend(binary_template_function(clauses["dist"]))
-        lines_to_write.extend(binary_template_function(clauses["row"]))
-        lines_to_write.extend(binary_template_function(clauses["column"]))
-        lines_to_write.extend(binary_template_function(clauses["block"]))
+        lines_to_write.append(unit_template_function(clauses["unit"]))
+        lines_to_write.append(binary_template_function(clauses["dist"]))
+        lines_to_write.append(binary_template_function(clauses["row"]))
+        lines_to_write.append(binary_template_function(clauses["column"]))
+        lines_to_write.append(binary_template_function(clauses["block"]))
 
-        lines_to_write.extend(one_template_function(clauses["one"]))
-        lines_to_write.extend(one_template_function(clauses["row_one"]))
-        lines_to_write.extend(one_template_function(clauses["column_one"]))
-        lines_to_write.extend(one_template_function(clauses["block_one"]))
+        lines_to_write.append(one_template_function(clauses["one"]))
+        lines_to_write.append(one_template_function(clauses["row_one"]))
+        lines_to_write.append(one_template_function(clauses["column_one"]))
+        lines_to_write.append(one_template_function(clauses["block_one"]))
+        write = [f"{''.join(sub_list)}" for sub_list in lines_to_write]
+        write.insert(0, start_line)
 
-        write = "".join(lines_to_write)
-        output_file.write(write)
+        output_file.writelines(write)
 
 
-def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, clear_clauses: bool = True) -> int:
+def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, ) -> int:
     start = time.perf_counter()
     back = len(clauses)
     path = os.path.join(info.input_file_path, name)
@@ -153,8 +177,24 @@ def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, cl
         lines_to_write.extend(template(clauses))
         temp_file.write("".join(lines_to_write))
     end = time.perf_counter()
-    # if clear_clauses:
-    #    del clauses[:]
+    print(f"Time to write {name}: {end - start}s.")
+    return back
+
+
+def write_temp_cnf_file_multiple(clauses, info: PuzzleInfoEncode, name: str, template,
+                                 *extra_clauses) -> int:
+    start = time.perf_counter()
+    back = len(clauses)
+    path = os.path.join(info.input_file_path, name)
+    info.temp_files.append(path)
+    lines_to_write = list()
+    lines_to_write.extend(template(clauses))
+    for extra in extra_clauses:
+        back += len(extra[0])
+        lines_to_write.extend(extra[1](extra[0]))
+    with open(path, "w") as temp_file:
+        temp_file.write("".join(lines_to_write))
+    end = time.perf_counter()
     print(f"Time to write {name}: {end - start}s.")
     return back
 
