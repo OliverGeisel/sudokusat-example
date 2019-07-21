@@ -58,8 +58,6 @@ def write_cnf_file_list(clauses, output_file_name, start_line):
 
 def write_cnf_file_list_join(clauses, output_file_name, start_line):
     space = " "
-    minus = "-"
-    empty = ""
     end = " 0\n"
     with open(output_file_name, "w")as output_file:
         output_file.write(start_line)
@@ -107,8 +105,6 @@ def write_cnf_file_list_join(clauses, output_file_name, start_line):
 
 
 def write_cnf_file_list_join_interpolation(clauses, output_file_name, start_line):
-    minus = "-"
-    empty = ""
     with open(output_file_name, "w")as output_file:
         lines_to_write = list()
         lines_to_write.append(start_line)
@@ -166,7 +162,7 @@ def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, cl
 def write_cnf_file_from_parts(temp_files, output_file_name, start_line, *extra):
     lines_to_write = [start_line]
     for ex in extra:
-        lines_to_write.append(ex)
+        lines_to_write.extend(ex)
     for file in temp_files:
         with open(file) as temp_file:
             lines_to_write.append(temp_file.read())

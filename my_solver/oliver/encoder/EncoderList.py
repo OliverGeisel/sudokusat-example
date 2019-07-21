@@ -16,19 +16,6 @@ class EncoderList:
         self.info = info
         self.clauses = defaultdict(lambda: list())
 
-        one_per_cell_clauses = list()
-        unit_clauses = list()
-        distinct_cell_clauses = list()
-
-        row_clauses = list()
-        row_one_clauses = list()
-
-        column_clauses = list()
-        column_one_clause = list()
-
-        block_clauses = list()
-        block_one_clauses = list()
-
     def distinct_column_clause_list(self, column: int) -> List[List[int]]:
         """  Create the clauses, that describe, that one column has every value exactly once
 
@@ -300,19 +287,13 @@ class EncoderList:
             sum_of_clauses += write_temp_cnf_file(self.clauses["column_one"], self.info, "one_column.txt",
                                                   one_template_function)
             del self.clauses["column_one"]
-
+        block_str = list()
+        block_one_str = list()
+        extra = [block_str, block_one_str]
         # add clauses for block distinction
         self.calc_block_clauses_list(self.clauses["block"], self.clauses["block_one"])
         if self.info.length >= self.large_size:
-            # sum_of_clauses += write_temp_cnf_file(self.clauses["block"], self.info, "block.txt",
-            #                                       binary_template_function)
-            # del self.clauses["block"]
-            #
-            # sum_of_clauses += write_temp_cnf_file(self.clauses["block_one"], self.info, "one_block.txt",
-            #                                       one_template_function)
-            # del self.clauses["block_one"]
-            block_str = []
-            block_one_str = []
+
             block_str.extend(binary_template_function(self.clauses["block"]))
             sum_of_clauses += len(self.clauses["block"])
             del self.clauses["block"]
@@ -328,7 +309,7 @@ class EncoderList:
 
         start = time.perf_counter()
         if self.info.length >= self.large_size:
-            write_cnf_file_from_parts(self.info.temp_files, output_file, start_line)
+            write_cnf_file_from_parts(self.info.temp_files, output_file, start_line, *extra)
         else:
             write_cnf_file_list_join_interpolation_map(self.clauses, output_file, start_line)
         end = time.perf_counter()
