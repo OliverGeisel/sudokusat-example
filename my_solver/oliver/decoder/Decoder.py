@@ -64,6 +64,9 @@ def decode(encode_info: PuzzleInfoEncode) -> None:
     except UnsatisfiableException:
         return
     write_solution_file(info, filled_sudoku)
+    print(info.text)
+    for i in filled_sudoku:
+        print(i)
 
 
 def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:

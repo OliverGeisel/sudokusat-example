@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from typing import List
 
@@ -130,8 +131,7 @@ def write_cnf_file_list_join(clauses, output_file_name, start_line):
 
 def write_cnf_file_list_join_interpolation(clauses, output_file_name, start_line):
     with open(output_file_name, "w")as output_file:
-        lines_to_write = list()
-        lines_to_write.append(start_line)
+        lines_to_write = [start_line]
         for clause in clauses["unit"]:
             lines_to_write.append(f"{empty if clause[1] else minus}{clause[0]} 0\n")
         for clause in clauses["dist"]:
@@ -177,7 +177,7 @@ def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, ) 
         lines_to_write.extend(template(clauses))
         temp_file.write("".join(lines_to_write))
     end = time.perf_counter()
-    print(f"Time to write {name}: {end - start}s.")
+    print(f"Time to write {name}: {end - start}s.", file=sys.stderr)
     return back
 
 
@@ -195,7 +195,7 @@ def write_temp_cnf_file_multiple(clauses, info: PuzzleInfoEncode, name: str, tem
     with open(path, "w") as temp_file:
         temp_file.write("".join(lines_to_write))
     end = time.perf_counter()
-    print(f"Time to write {name}: {end - start}s.")
+    print(f"Time to write {name}: {end - start}s.", file=sys.stderr)
     return back
 
 

@@ -30,7 +30,7 @@ tasks:
 
 limits:
   time: 180 # s
-  memory: 4096 # mb
+  memory: 8192 # mb
 
 # You will probably want to change the solver configuration below
 tools:
@@ -42,11 +42,11 @@ tools:
       clasp:
         solver: clasp
   # # Uncomment and modify to add more solvers
-  alternative_implementation:
-    module: my_solver.AnotherImplementation # or other_solver.Solver, etc.
-    parameters:
-      riss:
-        solver: riss
+    #alternative_implementation:
+    #  module: my_solver.MySudokuSolver # or other_solver.Solver, etc.
+    #  parameters:
+    #   riss:
+    #     solver: riss
   #     glucose:
   #       solver: glucose
 # ----

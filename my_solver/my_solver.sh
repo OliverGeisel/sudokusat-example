@@ -9,10 +9,9 @@ TASK=$2
 # Simulate work
 #>&2 echo "running $0 $*"
 filename="$(basename $2)"
-echo ${filename}
 #if [[ ${filename} == "bsp-sudoku1.txt" ]]; then
 #    cat $(dirname $2)/$(basename --suffix=.txt $2).sol
 #fi
-python3 ../main.py $TASK $SATSOLVER
+python3 ../../../../../main.py $TASK $SATSOLVER
 echo "done!"
-  #
+

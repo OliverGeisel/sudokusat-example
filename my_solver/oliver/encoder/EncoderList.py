@@ -1,3 +1,4 @@
+import sys
 import time
 from collections import defaultdict
 from typing import List
@@ -199,7 +200,7 @@ class EncoderList:
             block_one_clauses.extend(self.only_one_solution_per_block_clause_list(block_pos))
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish block! Time: " + str(time_to_encode))
+        print("Finish block! Time: " + str(time_to_encode), file=sys.stderr)
 
     def calc_column_clauses_list(self, column_clauses, column_one_clauses) -> None:
         start = time.perf_counter()
@@ -208,7 +209,7 @@ class EncoderList:
             column_one_clauses.extend(self.only_one_solution_per_column_clause_list(column))
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish column! Time: " + str(time_to_encode))
+        print("Finish column! Time: " + str(time_to_encode), file=sys.stderr)
 
     def calc_row_clauses_list(self, row_clauses, row_one_clauses) -> None:
         start = time.perf_counter()
@@ -217,7 +218,7 @@ class EncoderList:
             row_one_clauses.extend(self.only_one_solution_per_row_clause_list(row))
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish row! Time: " + str(time_to_encode))
+        print("Finish row! Time: " + str(time_to_encode), file=sys.stderr)
 
     def calc_cell_clauses_list(self, distinct_cell_clauses, one_per_cell_clauses, unit_clauses, field) -> None:
         start = time.perf_counter()
@@ -249,7 +250,7 @@ class EncoderList:
                     distinct_cell_clauses.extend(cell_clauses)
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish cell! Time: " + str(time_to_encode))
+        print("Finish cell! Time: " + str(time_to_encode), file=sys.stderr)
 
     def encode(self, field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
         self.info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
@@ -261,7 +262,6 @@ class EncoderList:
             extra = [[self.clauses["dist"], binary_template_function], [self.clauses["one"], one_template_function]]
             sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["unit"], self.info, "cell.txt",
                                                            unit_template_function, *extra)
-
         # add clauses for row distinction
         self.calc_row_clauses_list(self.clauses["row"], self.clauses["row_one"])
         if self.info.length >= self.large_size:
@@ -287,7 +287,7 @@ class EncoderList:
             block_one_str.extend(one_template_function(self.clauses["block_one"]))
             sum_of_clauses += len(self.clauses["block_one"])
             del self.clauses["block_one"]
-            print("Finish block")
+            print("Finish block", file=sys.stderr)
         num_clause = sum(
             [len(x) for x in self.clauses.values()]) if self.info.length < self.large_size else sum_of_clauses
         num_var = self.info.length * self.info.square_of_length
@@ -301,5 +301,5 @@ class EncoderList:
             write_cnf_file_list_join_interpolation_map(self.clauses, output_file, start_line)
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Time to write CNF-File: {time}s".format(time=time_to_encode))
+        print("Time to write CNF-File: {time}s".format(time=time_to_encode), file=sys.stderr)
         return self.info
