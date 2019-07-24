@@ -264,7 +264,7 @@ class EncoderList:
         self.calc_cell_clauses_list(field)
         field.clear()
         sum_of_clauses = 0
-        output_file = self.info.output_file_complete_absolute()
+        output_file = self.info.output_file_name
         with open(output_file, "w") as output:
             output_line = list()
             if self.info.length >= self.large_size:

@@ -33,8 +33,8 @@ def main(*args):
         path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/riss"))
     else:
         path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/clasp.exe"))
-    input_file = encode_info.output_file_complete_rel()
-    output_file = encode_info.SAT_solution_file_complete_rel()
+    input_file = encode_info.output_file_name
+    output_file = encode_info.SAT_solution_file_name
 
     start = time.perf_counter()
 

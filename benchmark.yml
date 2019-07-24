@@ -30,7 +30,7 @@ tasks:
 
 limits:
   time: 180 # s
-  memory: 8192 # mb
+  memory: 4096 # mb
 
 # You will probably want to change the solver configuration below
 tools:
