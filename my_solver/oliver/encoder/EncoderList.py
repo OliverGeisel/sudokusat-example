@@ -27,17 +27,22 @@ class EncoderList:
         length = self.info.length
         to_append = self.clauses["column"]
         first_pos = Position(self.info, column=column)
-        second_pos = Position(self.info, column=column)
+        second_pos = Position(self.info, 2, column=column)
+        run1 = first_pos.var
+        run2 = second_pos.var
+        step = self.info.square_of_length
         for upper_row in self.info.values:
-            first_pos.set_row(upper_row)
             for lower_row in range(upper_row + 1, length + 1):
-                second_pos.set_row(lower_row)
-                run1 = first_pos.var
-                run2 = second_pos.var
                 for value in self.info.values:
                     to_append.append([run1, run2])
                     run1 += 1
                     run2 += 1
+                run1 -= length
+                run2 -= length
+                run2 += step
+            run2 -= step * (length - upper_row - 1)
+            run1 += step       
+
 
     def distinct_row_clause_list(self, row: int) -> None:
         """
@@ -46,18 +51,20 @@ class EncoderList:
         :return: clauses for the row
         """
         length = self.info.length
-        first_pos = Position(self.info, row, 0)
-        second_pos = Position(self.info, row, 0)
+        to_append = self.clauses["row"]
+        first_pos = Position(self.info, row)
+        second_pos = Position(self.info, row, 2)
+        run1 = first_pos.var
+        run2 = second_pos.var
         for left_column in self.info.values:
-            first_pos.set_column(left_column)
             for right_column in range(left_column + 1, length + 1):
-                second_pos.set_column(right_column)
-                run1 = first_pos.var
-                run2 = second_pos.var
                 for value in self.info.values:
-                    self.clauses["row"].append([run1, run2])
+                    to_append.append([run1, run2])
                     run1 += 1
                     run2 += 1
+                run1 -= length
+            run2 -= length * (length - left_column - 1)
+            run1 += length
 
     def one_value_per_cell_clause_list(self, row_count: int, cell_count: int) -> List[int]:
         literals = list()
@@ -82,10 +89,10 @@ class EncoderList:
             run1 += 1
         return exactly_one_value_per_cell_clause
 
-    def only_one_solution_per_row_clause_list(self, row: int) -> List[List[int]]:
-        back = list()
+    def only_one_solution_per_row_clause_list(self, row: int) -> None:
         step = self.info.length
         pos = Position(self.info, row)
+        to_append = self.clauses["row_one"]
         for value in self.info.values:
             pos.set_value(value)
             run = pos.var
@@ -93,12 +100,12 @@ class EncoderList:
             for column in self.info.values:
                 clause.append(run)
                 run += step
-            self.clauses["row_one"].append(clause)
-        return back
+            to_append.append(clause)
 
     def only_one_solution_per_column_clause_list(self, column: int) -> None:
         pos = Position(self.info, column=column)
         step = self.info.square_of_length
+        to_append = self.clauses["column_one"]
         for value in self.info.values:
             pos.set_value(value)
             clause = list()
@@ -106,7 +113,7 @@ class EncoderList:
             for row in self.info.values:
                 clause.append(run)
                 run += step
-            self.clauses["column_one"].append(clause)
+            to_append.append(clause)
 
     def only_one_solution_per_block_clause_list(self, block_pos: List[int]) -> List[List[int]]:
         back = list()
@@ -114,14 +121,16 @@ class EncoderList:
         start_row = block_pos[0] * sqrt_of_length + 1
         start_column = block_pos[1] * sqrt_of_length + 1
         pos = Position(self.info, start_row, start_column)
+        step = self.info.square_of_length
         for value in self.info.values:
             pos.set_value(value)
             clause = list()
             for row_in_block in range(start_row, start_row + sqrt_of_length):
                 pos.set_row(row_in_block)
+                run = pos.var
                 for column_in_block in range(start_column, start_column + sqrt_of_length):
-                    pos.set_column(column_in_block)
-                    clause.append(pos.var)
+                    clause.append(run)
+                    run += step
             back.append(clause)
         return back
 
@@ -139,6 +148,7 @@ class EncoderList:
         first_cell_pos_in_block = (row_in_block - 1) * self.info.sqrt_of_length + column_in_block
         first_pos = Position(self.info, start_row - 1 + row_in_block, start_column - 1 + column_in_block)
         second_pos = Position(self.info)
+        to_append = self.clauses["block"]
         # absolute row in puzzle
         for current_row in range(start_row, start_row + sqrt_of_length):
             # absolute column in puzzle
@@ -158,7 +168,7 @@ class EncoderList:
                 run1 = first_pos.var
                 run2 = second_pos.var
                 for value in self.info.values:
-                    self.clauses["block"].append([run1, run2])
+                    to_append.append([run1, run2])
                     run1 += 1
                     run2 += 1
 
@@ -194,7 +204,7 @@ class EncoderList:
             self.only_one_solution_per_block_clause_list(block_pos)
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish block! Time: " + str(time_to_encode), file=sys.stderr)
+        print(f"Finish block! Time: {time_to_encode}s", file=sys.stderr)
 
     def calc_column_clauses_list(self) -> None:
         start = time.perf_counter()
@@ -212,11 +222,14 @@ class EncoderList:
             self.only_one_solution_per_row_clause_list(row)
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish row! Time: " + str(time_to_encode), file=sys.stderr)
+        print(f"Finish row! Time: {time_to_encode}s", file=sys.stderr)
 
     def calc_cell_clauses_list(self, field) -> None:
         start = time.perf_counter()
         pos = Position(self.info)
+        append_to_unit = self.clauses["unit"]
+        append_to_one = self.clauses["one"]
+        append_to_dist = self.clauses["dist"]
         for row_count, row in enumerate(field):
             row_count += 1
             pos.set_row(row_count)
@@ -227,94 +240,98 @@ class EncoderList:
                     # add known values to unit_clause
                     pos.set_value(cell)
                     u_clause = pos.var
-                    self.clauses["unit"].append([u_clause, 1])
-                    pos.set_value(1)
-                    run = pos.var
+                    append_to_unit.append([u_clause, 1])
+                    u_clause -= (cell - 1)
                     for value in self.info.values:
                         if value == cell:
-                            run += 1
-                            continue
-                        self.clauses["unit"].append([run, 0])
-                        run += 1
+                            pass
+                        else:
+                            append_to_unit.append([u_clause, 0])
+                        u_clause += 1
                 else:
                     # if not known add at least and exactly one value clauses to formula
                     clause = self.one_value_per_cell_clause_list(row_count, cell_count)
-                    self.clauses["one"].append(clause)
+                    append_to_one.append(clause)
                     cell_clauses = self.exactly_one_value_per_cell_list(row_count, cell_count)
-                    self.clauses["dist"].extend(cell_clauses)
+                    append_to_dist.extend(cell_clauses)
         end = time.perf_counter()
         time_to_encode = end - start
-        print("Finish cell! Time: " + str(time_to_encode), file=sys.stderr)
+        print(f"Finish cell! Time: {time_to_encode}s", file=sys.stderr)
 
     def encode(self, field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
         self.info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
-        solution_strs = list()
         # add clauses for at least one possible value in each cell
         self.calc_cell_clauses_list(field)
         field.clear()
         sum_of_clauses = 0
-        if self.info.length >= self.large_size:
-            extra = [[self.clauses["dist"], binary_template_function], [self.clauses["one"], one_template_function]]
-            sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["unit"], self.info, "cell.txt",
-                                                           unit_template_function, *extra)
-        else:
-            solution_strs.append("".join(binary_template_function(self.clauses["dist"])))
-            solution_strs.append("".join(unit_template_function(self.clauses["unit"])))
-            solution_strs.append("".join(one_template_function(self.clauses["one"])))
-
-        # add clauses for row
-        self.calc_row_clauses_list()
-        if self.info.length >= self.large_size:
-            sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["row"], self.info, "row.txt",
-                                                           binary_template_function,
-                                                           [self.clauses["row_one"], one_template_function])
-        else:
-            solution_strs.append("".join(binary_template_function(self.clauses["row"])))
-            solution_strs.append("".join(one_template_function(self.clauses["row_one"])))
-
-        # add clauses for column
-        self.calc_column_clauses_list()
-        if self.info.length >= self.large_size:
-            sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["column"], self.info, "column.txt",
-                                                           binary_template_function,
-                                                           [self.clauses["column_one"], one_template_function])
-        else:
-            solution_strs.append("".join(binary_template_function(self.clauses["column"])))
-            solution_strs.append("".join(one_template_function(self.clauses["column_one"])))
-
-        # add clauses for block
-        block_str = list()
-        block_one_str = list()
-        extra = [block_str, block_one_str]
-        self.calc_block_clauses_list()
-        if self.info.length >= self.large_size:
-            block_str.extend(binary_template_function(self.clauses["block"]))
-            sum_of_clauses += len(self.clauses["block"])
-            del self.clauses["block"]
-            block_one_str.extend(one_template_function(self.clauses["block_one"]))
-            sum_of_clauses += len(self.clauses["block_one"])
-            del self.clauses["block_one"]
-            print("Finish block", file=sys.stderr)
-        else:
-            solution_strs.append("".join(binary_template_function(self.clauses["block"])))
-            solution_strs.append("".join(one_template_function(self.clauses["block_one"])))
-
-        num_clause = sum(
-            [len(x) for x in self.clauses.values()]) if self.info.length < self.large_size else sum_of_clauses
-        num_var = self.info.length * self.info.square_of_length
-        start_line = f"p cnf {num_var} {num_clause}\n"
         output_file = self.info.output_file_complete_absolute()
+        with open(output_file, "w") as output:
+            output_line = list()
+            if self.info.length >= self.large_size:
+                extra = [[self.clauses["dist"], binary_template_function], [self.clauses["one"], one_template_function]]
+                sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["unit"], self.info, "cell.txt",
+                                                               unit_template_function, *extra)
+            else:
+                sum_of_clauses += len(self.clauses["dist"]) + len(self.clauses["one"]) + len(self.clauses["unit"])
+                output_line.append("".join(binary_template_function(self.clauses["dist"])))
+                output_line.append("".join(unit_template_function(self.clauses["unit"])))
+                output_line.append("".join(one_template_function(self.clauses["one"])))
 
-        start = time.perf_counter()
-        if self.info.length >= self.large_size:
-            write_cnf_file_from_parts(self.info.temp_files, output_file, start_line, *extra)
-        else:
-            with open(output_file, "w")as output_file:
-                lines_to_write = [start_line]
-                lines_to_write.extend(solution_strs)
-                write = ''.join(lines_to_write)
-                output_file.write(write)
-            #  write_cnf_file_list_join_interpolation_map(self.clauses, output_file, start_line)
+            # add clauses for row
+            self.calc_row_clauses_list()
+            if self.info.length >= self.large_size:
+                sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["row"], self.info, "row.txt",
+                                                               binary_template_function,
+                                                               [self.clauses["row_one"], one_template_function])
+            else:
+                sum_of_clauses += len(self.clauses["row"]) + len(self.clauses["row_one"])
+                output_line.append("".join(binary_template_function(self.clauses["row"])))
+                output_line.append("".join(one_template_function(self.clauses["row_one"])))
+
+            # add clauses for column
+            self.calc_column_clauses_list()
+            if self.info.length >= self.large_size:
+                sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["column"], self.info, "column.txt",
+                                                               binary_template_function,
+                                                               [self.clauses["column_one"], one_template_function])
+            else:
+                sum_of_clauses += len(self.clauses["column"]) + len(self.clauses["column_one"])
+                output_line.append("".join(binary_template_function(self.clauses["column"])))
+                output_line.append("".join(one_template_function(self.clauses["column_one"])))
+
+            # add clauses for block
+            block_str = list()
+            block_one_str = list()
+            extra = [block_str, block_one_str]
+            self.calc_block_clauses_list()
+            if self.info.length >= self.large_size:
+                sum_of_clauses += len(self.clauses["block"])
+                block_str.extend(binary_template_function(self.clauses["block"]))
+                del self.clauses["block"]
+                sum_of_clauses += len(self.clauses["block_one"])
+                block_one_str.extend(one_template_function(self.clauses["block_one"]))
+                del self.clauses["block_one"]
+                print("Finish block", file=sys.stderr)
+            else:
+                sum_of_clauses += len(self.clauses["block"]) + len(self.clauses["block_one"])
+                output_line.append("".join(binary_template_function(self.clauses["block"])))
+                output_line.append("".join(one_template_function(self.clauses["block_one"])))
+
+            num_var = self.info.length * self.info.square_of_length
+            start_line = f"p cnf {num_var} {sum_of_clauses}\n"
+
+            start = time.perf_counter()
+            if self.info.length >= self.large_size:
+                write_cnf_file_from_parts(self.info.temp_files, output_file, start_line, *extra)
+            else:
+                output_line.insert(0, start_line)
+                output.writelines(output_line)
+                # with open(output_file, "w")as output_file:
+                #     lines_to_write = [start_line]
+                #     lines_to_write.extend(solution_strs)
+                #     write = ''.join(lines_to_write)
+                #     output_file.write(write)
+                #  write_cnf_file_list_join_interpolation_map(self.clauses, output_file, start_line)
         end = time.perf_counter()
         time_to_encode = end - start
         print(f"Time to write CNF-File: {time_to_encode}s", file=sys.stderr)

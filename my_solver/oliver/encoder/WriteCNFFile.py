@@ -34,6 +34,22 @@ def binary_template_function_delete(temp_clauses: List[List[int]]):
     return back
 
 
+def binary_template_function_concat_delete(temp_clauses: List[List[int]]):
+    back = list()
+    while temp_clauses:
+        back.extend(["-" + str(x[0]) + " -" + str(x[1]) + " 0\n" for x in temp_clauses[size_of_deletion:]])
+        del temp_clauses[size_of_deletion:]
+    return back
+
+
+def binary_template_function_percent_delete(temp_clauses: List[List[int]]):
+    back = list()
+    while temp_clauses:
+        back.extend(["-%s -%s 0\n" % (str(x[0]), str(x[1])) for x in temp_clauses[size_of_deletion:]])
+        del temp_clauses[size_of_deletion:]
+    return back
+
+
 def one_template_function(temp_clauses):
     return [f"{' '.join([str(literal) for literal in clause])} 0\n" for clause in temp_clauses]
 

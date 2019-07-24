@@ -13,7 +13,7 @@ from my_solver.oliver.reader import Input
 def main(*args):
     puzzle_path = os.path.abspath(args[1])
     solver_name = args[2]
-    rel_path = os.path.relpath(puzzle_path)
+    rel_path = os.path.abspath(puzzle_path)
 
     start = time.perf_counter()
     field, info = Input.input_source(rel_path)

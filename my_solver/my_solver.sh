@@ -12,6 +12,6 @@ filename="$(basename $2)"
 #if [[ ${filename} == "bsp-sudoku1.txt" ]]; then
 #    cat $(dirname $2)/$(basename --suffix=.txt $2).sol
 #fi
-python3 ../../../../../main.py $TASK $SATSOLVER
+python3 $(dirname $0)/../main.py $TASK $SATSOLVER
 echo "done!"
 
