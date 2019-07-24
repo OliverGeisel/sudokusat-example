@@ -66,18 +66,17 @@ def decode(encode_info: PuzzleInfoEncode) -> None:
     write_solution_file(info, filled_sudoku)
     print(info.text)
     for i in filled_sudoku:
-        print(i)
+        print(i, end="")
 
 
 def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
     with open(source_path) as solution:
         content = solution.readlines()
 
-    satisfiable = [x for x in content if x[0] == "s"][0]
-    if "UNSATISFIABLE".lower() in satisfiable.lower():
-        write_solution_file(info, "NO Solution\n")
-        raise UnsatisfiableException
-
+        satisfiable = [x for x in content if x[0] == "s"][0]
+        if "UNSATISFIABLE".lower() in satisfiable.lower():
+            write_solution_file(info, "NO Solution\n")
+            raise UnsatisfiableException
     #  remove 'v'
     var_lines = [x for x in content if x[0] == "v"]
     var_lines = list(map(lambda x: x.replace("v ", ""), var_lines))

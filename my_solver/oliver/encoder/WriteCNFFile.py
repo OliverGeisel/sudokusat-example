@@ -38,7 +38,7 @@ def one_template_function(temp_clauses):
     return [f"{' '.join([str(literal) for literal in clause])} 0\n" for clause in temp_clauses]
 
 
-def one_template_function_delete(temp_clauses: List[List[int]]):
+def one_template_function_delete(temp_clauses: List[List[int]]) -> List[str]:
     back = list()
     while temp_clauses:
         back.extend(
@@ -47,17 +47,11 @@ def one_template_function_delete(temp_clauses: List[List[int]]):
     return back
 
 
-def write_cnf_file(clauses, output_file_name, start_line):
+def write_cnf_file(clauses: dict, output_file_name, start_line: str):
     with open(output_file_name, "w")as output_file:
-        output_file.write(start_line)
-        output_file.writelines(clauses["unit"])
-        output_file.writelines(clauses["dist"])
-
-        output_file.writelines(clauses["row"])
-        output_file.writelines(clauses["column"])
-        output_file.writelines(clauses["block"])
-
-        output_file.writelines(clauses["one"])
+        lines = [x for sub_clauses in clauses.values() for x in sub_clauses]
+        lines.insert(0, start_line)
+        output_file.write("".join(lines))
 
 
 def write_cnf_file_list(clauses, output_file_name, start_line):
@@ -148,23 +142,23 @@ def write_cnf_file_list_join_interpolation(clauses, output_file_name, start_line
         output_file.write(write)
 
 
-def write_cnf_file_list_join_interpolation_map(clauses, output_file_name, start_line):
+def write_cnf_file_list_join_interpolation_map(clauses: dict, output_file_name, start_line):
     with open(output_file_name, "w")as output_file:
         lines_to_write = list()
-        lines_to_write.append(unit_template_function(clauses["unit"]))
-        lines_to_write.append(binary_template_function(clauses["dist"]))
-        lines_to_write.append(binary_template_function(clauses["row"]))
-        lines_to_write.append(binary_template_function(clauses["column"]))
-        lines_to_write.append(binary_template_function(clauses["block"]))
+        lines_to_write.append(clauses["unit"])
+        lines_to_write.append(clauses["dist"])
+        lines_to_write.append(clauses["row"])
+        lines_to_write.append(clauses["column"])
+        lines_to_write.append(clauses["block"])
 
-        lines_to_write.append(one_template_function(clauses["one"]))
-        lines_to_write.append(one_template_function(clauses["row_one"]))
-        lines_to_write.append(one_template_function(clauses["column_one"]))
-        lines_to_write.append(one_template_function(clauses["block_one"]))
-        write = [f"{''.join(sub_list)}" for sub_list in lines_to_write]
+        lines_to_write.append(clauses["one"])
+        lines_to_write.append(clauses["row_one"])
+        lines_to_write.append(clauses["column_one"])
+        lines_to_write.append(clauses["block_one"])
+        clauses.clear()
+        write = [''.join(sub_list) for sub_list in lines_to_write]
         write.insert(0, start_line)
-
-        output_file.writelines(write)
+        output_file.write("".join(write))
 
 
 def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, ) -> int:

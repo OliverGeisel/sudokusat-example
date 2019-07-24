@@ -38,13 +38,4 @@ def input_source(path: str) -> Tuple[List[List[int]], PuzzleInfoInput]:
             data_line.append(part)
         data_line = [int(x) for x in data_line]  # convert str to int
         field_data.append(data_line)
-    """
-    for line in field_data:
-        for cell_count, cell in enumerate(line):
-            cell_count += 1
-            print(str(cell) + " ", end="")
-            if cell_count % info.sqrt_of_length == 0:
-                print("| ", end="")
-        print()
-    """
     return field_data, info
