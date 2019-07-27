@@ -1,3 +1,4 @@
+import itertools as it
 import sys
 import time
 from collections import defaultdict
@@ -41,8 +42,7 @@ class EncoderList:
                 run2 -= length
                 run2 += step
             run2 -= step * (length - upper_row - 1)
-            run1 += step       
-
+            run1 += step
 
     def distinct_row_clause_list(self, row: int) -> None:
         """
@@ -56,37 +56,30 @@ class EncoderList:
         second_pos = Position(self.info, row, 2)
         run1 = first_pos.var
         run2 = second_pos.var
-        for left_column in self.info.values:
-            for right_column in range(left_column + 1, length + 1):
-                for value in self.info.values:
-                    to_append.append([run1, run2])
-                    run1 += 1
-                    run2 += 1
-                run1 -= length
-            run2 -= length * (length - left_column - 1)
-            run1 += length
+        for value in self.info.values_zero:
+            vars_in_row = range(run1 + value, run1 + self.info.square_of_length + value, self.info.length)
+            to_append.extend(it.combinations(vars_in_row, 2))
+        # for left_column in self.info.values:
+        #     for right_column in range(left_column + 1, length + 1):
+        #         for value in self.info.values:
+        #             to_append.append([run1, run2])
+        #             run1 += 1
+        #             run2 += 1
+        #         run1 -= length
+        #     run2 -= length * (length - left_column - 1)
+        #     run1 += length
 
     def one_value_per_cell_clause_list(self, row_count: int, cell_count: int) -> List[int]:
-        literals = list()
         pos = Position(self.info, row_count, cell_count)
         run = pos.var
-        for value in self.info.values:
-            literals.append(run)
-            run += 1
-        return literals
+        return [run + value - 1 for value in self.info.values]
 
     def exactly_one_value_per_cell_list(self, row: int, column: int) -> List[List[int]]:
         exactly_one_value_per_cell_clause = list()
         first_pos = Position(self.info, row, column)
-        second_pos = Position(self.info, row, column)
         run1 = first_pos.var
-        for value in self.info.values:
-            run2 = second_pos.var + value
-            for other in range(value + 1, self.info.length + 1):
-                clause = [run1, run2]
-                exactly_one_value_per_cell_clause.append(clause)
-                run2 += 1
-            run1 += 1
+        vars_for_cell = range(run1, run1 + self.info.length)
+        exactly_one_value_per_cell_clause.extend(it.combinations(vars_for_cell, 2))
         return exactly_one_value_per_cell_clause
 
     def only_one_solution_per_row_clause_list(self, row: int) -> None:
