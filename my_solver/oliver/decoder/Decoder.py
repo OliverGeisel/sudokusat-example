@@ -1,6 +1,5 @@
-from typing import List
-
 import math
+from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfo, PuzzleInfoEncode
 from my_solver.oliver.encoder.Position import Position
@@ -63,6 +62,8 @@ def decode(encode_info: PuzzleInfoEncode) -> None:
         filled_sudoku = read_source(path, info)
     except UnsatisfiableException:
         return
+    except RuntimeError:
+        return
     write_solution_file(info, filled_sudoku)
     print(info.text)
     for i in filled_sudoku:
@@ -77,6 +78,8 @@ def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
         if "UNSATISFIABLE".lower() in satisfiable.lower():
             write_solution_file(info, "NO Solution\n")
             raise UnsatisfiableException
+        if "UNKNOWN" in satisfiable:
+            raise RuntimeError
     #  remove 'v'
     var_lines = [x for x in content if x[0] == "v"]
     var_lines = list(map(lambda x: x.replace("v ", ""), var_lines))

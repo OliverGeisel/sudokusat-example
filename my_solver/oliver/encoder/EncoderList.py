@@ -28,21 +28,24 @@ class EncoderList:
         length = self.info.length
         to_append = self.clauses["column"]
         first_pos = Position(self.info, column=column)
-        second_pos = Position(self.info, 2, column=column)
         run1 = first_pos.var
-        run2 = second_pos.var
-        step = self.info.square_of_length
-        for upper_row in self.info.values:
-            for lower_row in range(upper_row + 1, length + 1):
-                for value in self.info.values:
-                    to_append.append([run1, run2])
-                    run1 += 1
-                    run2 += 1
-                run1 -= length
-                run2 -= length
-                run2 += step
-            run2 -= step * (length - upper_row - 1)
-            run1 += step
+        for value in self.info.values_zero:
+            vars_in_row = range(run1 + value, run1 + self.info.square_of_length * self.info.length + value,
+                                self.info.square_of_length)
+            to_append.extend(it.combinations(vars_in_row, 2))
+        # run2 = second_pos.var
+        # step = self.info.square_of_length
+        # for upper_row in self.info.values:
+        #     for lower_row in range(upper_row + 1, length + 1):
+        #         for value in self.info.values:
+        #             to_append.append([run1, run2])
+        #             run1 += 1
+        #             run2 += 1
+        #         run1 -= length
+        #         run2 -= length
+        #         run2 += step
+        #     run2 -= step * (length - upper_row - 1)
+        #     run1 += step
 
     def distinct_row_clause_list(self, row: int) -> None:
         """
@@ -53,9 +56,7 @@ class EncoderList:
         length = self.info.length
         to_append = self.clauses["row"]
         first_pos = Position(self.info, row)
-        second_pos = Position(self.info, row, 2)
         run1 = first_pos.var
-        run2 = second_pos.var
         for value in self.info.values_zero:
             vars_in_row = range(run1 + value, run1 + self.info.square_of_length + value, self.info.length)
             to_append.extend(it.combinations(vars_in_row, 2))
@@ -108,11 +109,9 @@ class EncoderList:
                 run += step
             to_append.append(clause)
 
-    def only_one_solution_per_block_clause_list(self, block_pos: List[int]) -> List[List[int]]:
+    def only_one_solution_per_block_clause_list(self, start_row, start_column) -> List[List[int]]:
         back = list()
         sqrt_of_length = self.info.sqrt_of_length
-        start_row = block_pos[0] * sqrt_of_length + 1
-        start_column = block_pos[1] * sqrt_of_length + 1
         pos = Position(self.info, start_row, start_column)
         step = self.info.square_of_length
         for value in self.info.values:
@@ -127,35 +126,86 @@ class EncoderList:
             back.append(clause)
         return back
 
-    def calc_clauses_for_cell_in_block_list(self, row_in_block, column_in_block, start_row,
-                                            start_column) -> None:
+    def calc_clauses_for_cell_in_block_list_dev(self, row_in_block, column_in_block, start_row_of_block,
+                                                start_column_of_block) -> None:
         """
         Get Clauses that encode that the cell(start_row,start_column) to be distinct from the other cells
         :param row_in_block:
         :param column_in_block:
-        :param start_row:
-        :param start_column:
+        :param start_row_of_block:
+        :param start_column_of_block:
         :return:
         """
         sqrt_of_length = self.info.sqrt_of_length
         first_cell_pos_in_block = (row_in_block - 1) * self.info.sqrt_of_length + column_in_block
-        first_pos = Position(self.info, start_row - 1 + row_in_block, start_column - 1 + column_in_block)
-        second_pos = Position(self.info)
+        first_pos = Position(self.info, start_row_of_block - 1 + row_in_block,
+                             start_column_of_block - 1 + column_in_block).var
         to_append = self.clauses["block"]
+        vars_in_block = list()
+        step_row = self.info.square_of_length
+        step_column = self.info.length
+        run = (start_row_of_block - 1) * step_row + step_column * (start_column_of_block - 1) + 1
+        current_cell_pos_in_block = 1
+        # start with second row and got to last row of block
+        for current_row in range(start_row_of_block, start_row_of_block + sqrt_of_length):
+            if current_row > start_row_of_block + row_in_block - 1:
+                # from first column to last column in block
+                for current_column in range(start_column_of_block, start_column_of_block + sqrt_of_length):
+                    # skip if cell is behind the start_cell or cell is in same column
+                    if current_cell_pos_in_block <= first_cell_pos_in_block or \
+                            current_column == start_column_of_block - 1 + column_in_block:
+                        pass
+                    else:
+                        vars_in_block.append(run)
+                    # next column
+                    run += step_column
+                    current_cell_pos_in_block += 1
+                # next row
+                run += step_row - step_column * sqrt_of_length
+            else:
+                run += step_row
+                current_cell_pos_in_block += sqrt_of_length
+        # after get all vars
+        clauses = [[first_pos, variable] for variable in vars_in_block]
+        for value in self.info.values_zero:
+            to_append.extend([[clause[0] + value, clause[1] + value] for clause in clauses])
+
+    def calc_clauses_for_cell_in_block_list(self, row_in_block, column_in_block, start_row_of_block,
+                                            start_column_of_block) -> None:
+        """
+        Get Clauses that encode that the cell(start_row,start_column) to be distinct from the other cells
+        :param row_in_block:
+        :param column_in_block:
+        :param start_row_of_block:
+        :param start_column_of_block:
+        :return:
+        """
+        sqrt_of_length = self.info.sqrt_of_length
+        second_pos = Position(self.info)
+        first_cell_pos_in_block = (row_in_block - 1) * self.info.sqrt_of_length + column_in_block
+        first_pos = Position(self.info, start_row_of_block - 1 + row_in_block,
+                             start_column_of_block - 1 + column_in_block)
+        to_append = self.clauses["block"]
+        step_row = self.info.square_of_length
+        step_column = self.info.length
+        run = (start_row_of_block - 1) * step_row + step_column * (start_column_of_block - 1) + 1
+        current_cell_pos_in_block = 1
+        # start with second row and got to last row of block
+
         # absolute row in puzzle
-        for current_row in range(start_row, start_row + sqrt_of_length):
+        for current_row in range(start_row_of_block, start_row_of_block + sqrt_of_length):
             # absolute column in puzzle
-            if current_row <= start_row - 1 + row_in_block:
+            if current_row <= start_row_of_block - 1 + row_in_block:
                 continue
             second_pos.set_row(current_row)
-            for current_column in range(start_column, start_column + sqrt_of_length):
+            for current_column in range(start_column_of_block, start_column_of_block + sqrt_of_length):
                 # skip if cell is behind the start_cell
                 second_cell_pos = ((current_row - 1) % sqrt_of_length) * sqrt_of_length \
                                   + (current_column - 1) % sqrt_of_length + 1
                 if second_cell_pos <= first_cell_pos_in_block:
                     continue
                 # skipp if cell is in same row OR column
-                if current_column == start_column - 1 + column_in_block:
+                if current_column == start_column_of_block - 1 + column_in_block:
                     continue
                 second_pos.set_column(current_column)
                 run1 = first_pos.var
@@ -165,7 +215,7 @@ class EncoderList:
                     run1 += 1
                     run2 += 1
 
-    def distinct_block_clauses_list(self, block_pos: List[int]) -> None:
+    def distinct_block_clauses_list(self, start_row, start_column) -> None:
         """
         Calculate all clauses for one block in puzzle
         :param block_pos: position of the block in puzzle
@@ -177,24 +227,21 @@ class EncoderList:
         # same for 2 to 9
         # this continue with 1.2 2 by ...
         sqrt_of_length = self.info.sqrt_of_length
-        start_row = block_pos[0] * sqrt_of_length + 1
-        start_column = block_pos[1] * sqrt_of_length + 1
         # for one pos in block
         for line in range(start_row, start_row + sqrt_of_length - 1):
+            row_in_block = (line - 1) % sqrt_of_length + 1
             for cell in range(start_column, start_column + sqrt_of_length):
-                row_in_block = (line - 1) % sqrt_of_length + 1
                 column_in_block = (cell - 1) % sqrt_of_length + 1
-                self.calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, start_row, start_column)
+                self.calc_clauses_for_cell_in_block_list_dev(row_in_block, column_in_block, start_row, start_column)
 
     def calc_block_clauses_list(self) -> None:
         start = time.perf_counter()
-        block_pos = [0, 0]  # goes from 0,0 to sgrt(length)-1,sqrt(length)-1
         blocks_in_row = self.info.sqrt_of_length
         for block in range(self.info.length):
-            block_pos[0] = int(block / blocks_in_row)
-            block_pos[1] = block % blocks_in_row
-            self.distinct_block_clauses_list(block_pos)
-            self.only_one_solution_per_block_clause_list(block_pos)
+            start_row = int(block / blocks_in_row) * self.info.sqrt_of_length + 1
+            start_column = (block % blocks_in_row) * self.info.sqrt_of_length + 1
+            self.distinct_block_clauses_list(start_row, start_column)
+            self.only_one_solution_per_block_clause_list(start_row, start_column)
         end = time.perf_counter()
         time_to_encode = end - start
         print(f"Finish block! Time: {time_to_encode}s", file=sys.stderr)
