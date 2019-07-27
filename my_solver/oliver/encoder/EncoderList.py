@@ -1,4 +1,5 @@
 import itertools as it
+import os
 import sys
 import time
 from collections import defaultdict
@@ -33,19 +34,6 @@ class EncoderList:
             vars_in_row = range(run1 + value, run1 + self.info.square_of_length * self.info.length + value,
                                 self.info.square_of_length)
             to_append.extend(it.combinations(vars_in_row, 2))
-        # run2 = second_pos.var
-        # step = self.info.square_of_length
-        # for upper_row in self.info.values:
-        #     for lower_row in range(upper_row + 1, length + 1):
-        #         for value in self.info.values:
-        #             to_append.append([run1, run2])
-        #             run1 += 1
-        #             run2 += 1
-        #         run1 -= length
-        #         run2 -= length
-        #         run2 += step
-        #     run2 -= step * (length - upper_row - 1)
-        #     run1 += step
 
     def distinct_row_clause_list(self, row: int) -> None:
         """
@@ -60,15 +48,6 @@ class EncoderList:
         for value in self.info.values_zero:
             vars_in_row = range(run1 + value, run1 + self.info.square_of_length + value, self.info.length)
             to_append.extend(it.combinations(vars_in_row, 2))
-        # for left_column in self.info.values:
-        #     for right_column in range(left_column + 1, length + 1):
-        #         for value in self.info.values:
-        #             to_append.append([run1, run2])
-        #             run1 += 1
-        #             run2 += 1
-        #         run1 -= length
-        #     run2 -= length * (length - left_column - 1)
-        #     run1 += length
 
     def one_value_per_cell_clause_list(self, row_count: int, cell_count: int) -> List[int]:
         pos = Position(self.info, row_count, cell_count)
@@ -126,8 +105,8 @@ class EncoderList:
             back.append(clause)
         return back
 
-    def calc_clauses_for_cell_in_block_list_dev(self, row_in_block, column_in_block, start_row_of_block,
-                                                start_column_of_block) -> None:
+    def calc_clauses_for_cell_in_block_list(self, row_in_block, column_in_block, start_row_of_block,
+                                            start_column_of_block) -> None:
         """
         Get Clauses that encode that the cell(start_row,start_column) to be distinct from the other cells
         :param row_in_block:
@@ -170,55 +149,11 @@ class EncoderList:
         for value in self.info.values_zero:
             to_append.extend([[clause[0] + value, clause[1] + value] for clause in clauses])
 
-    def calc_clauses_for_cell_in_block_list(self, row_in_block, column_in_block, start_row_of_block,
-                                            start_column_of_block) -> None:
-        """
-        Get Clauses that encode that the cell(start_row,start_column) to be distinct from the other cells
-        :param row_in_block:
-        :param column_in_block:
-        :param start_row_of_block:
-        :param start_column_of_block:
-        :return:
-        """
-        sqrt_of_length = self.info.sqrt_of_length
-        second_pos = Position(self.info)
-        first_cell_pos_in_block = (row_in_block - 1) * self.info.sqrt_of_length + column_in_block
-        first_pos = Position(self.info, start_row_of_block - 1 + row_in_block,
-                             start_column_of_block - 1 + column_in_block)
-        to_append = self.clauses["block"]
-        step_row = self.info.square_of_length
-        step_column = self.info.length
-        run = (start_row_of_block - 1) * step_row + step_column * (start_column_of_block - 1) + 1
-        current_cell_pos_in_block = 1
-        # start with second row and got to last row of block
-
-        # absolute row in puzzle
-        for current_row in range(start_row_of_block, start_row_of_block + sqrt_of_length):
-            # absolute column in puzzle
-            if current_row <= start_row_of_block - 1 + row_in_block:
-                continue
-            second_pos.set_row(current_row)
-            for current_column in range(start_column_of_block, start_column_of_block + sqrt_of_length):
-                # skip if cell is behind the start_cell
-                second_cell_pos = ((current_row - 1) % sqrt_of_length) * sqrt_of_length \
-                                  + (current_column - 1) % sqrt_of_length + 1
-                if second_cell_pos <= first_cell_pos_in_block:
-                    continue
-                # skipp if cell is in same row OR column
-                if current_column == start_column_of_block - 1 + column_in_block:
-                    continue
-                second_pos.set_column(current_column)
-                run1 = first_pos.var
-                run2 = second_pos.var
-                for value in self.info.values:
-                    to_append.append([run1, run2])
-                    run1 += 1
-                    run2 += 1
-
     def distinct_block_clauses_list(self, start_row, start_column) -> None:
         """
         Calculate all clauses for one block in puzzle
-        :param block_pos: position of the block in puzzle
+        :param start_column:
+        :param start_row:
         :return: clauses for the block as string
         """
         # for 1.1 1 will reached by    1.2 1.3 are not 1
@@ -232,7 +167,7 @@ class EncoderList:
             row_in_block = (line - 1) % sqrt_of_length + 1
             for cell in range(start_column, start_column + sqrt_of_length):
                 column_in_block = (cell - 1) % sqrt_of_length + 1
-                self.calc_clauses_for_cell_in_block_list_dev(row_in_block, column_in_block, start_row, start_column)
+                self.calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, start_row, start_column)
 
     def calc_block_clauses_list(self) -> None:
         start = time.perf_counter()
@@ -304,7 +239,15 @@ class EncoderList:
         self.calc_cell_clauses_list(field)
         field.clear()
         sum_of_clauses = 0
-        output_file = self.info.output_file_name
+        output_file = os.path.join("tmp", os.path.splitext(self.info.input_file_name)[0], self.info.output_file_name)
+        try:
+            if not os.path.exists("tmp"):
+                os.mkdir("tmp")
+            sub_dir = os.path.join("tmp", os.path.splitext(self.info.input_file_name)[0])
+            if not os.path.exists(sub_dir):
+                os.mkdir(sub_dir)
+        except FileExistsError:
+            pass
         with open(output_file, "w") as output:
             output_line = list()
             if self.info.length >= self.large_size:

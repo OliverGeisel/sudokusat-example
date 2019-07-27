@@ -13,10 +13,9 @@ from my_solver.oliver.reader import Input
 def main(*args):
     puzzle_path = os.path.abspath(args[1])
     solver_name = args[2]
-    rel_path = os.path.abspath(puzzle_path)
 
     start = time.perf_counter()
-    field, info = Input.input_source(rel_path)
+    field, info = Input.input_source(puzzle_path)
     end = time.perf_counter()
     time_to_read = end - start
     print("Time to read file: {time}s".format(time=time_to_read), file=sys.stderr)
@@ -33,12 +32,11 @@ def main(*args):
         path_to_solver = "riss"
     else:
         path_to_solver = "clasp"
-    input_file = encode_info.output_file_name
-    output_file = encode_info.SAT_solution_file_name
-
+    cnf_file = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], encode_info.output_file_name)
+    output_file = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], encode_info.SAT_solution_file_name)
     start = time.perf_counter()
 
-    solver_process = subprocess.Popen([path_to_solver, input_file], stdout=subprocess.PIPE)
+    solver_process = subprocess.Popen([path_to_solver, cnf_file], stdout=subprocess.PIPE)
     if solver_process.poll():
         solver_process.wait()
     with open(output_file, "wb") as output_SAT:

@@ -1,4 +1,5 @@
 import math
+import os
 from typing import List
 
 from my_solver.oliver.PuzzleInfo import PuzzleInfoOutput, PuzzleInfo, PuzzleInfoEncode
@@ -57,7 +58,7 @@ def create_sep_line(info: PuzzleInfo) -> str:
 
 def decode(encode_info: PuzzleInfoEncode) -> None:
     info = PuzzleInfoOutput(encode_info)
-    path = info.input_file_name
+    path = os.path.join("tmp", os.path.splitext(encode_info.input_file_name)[0], info.input_file_name)
     try:
         filled_sudoku = read_source(path, info)
     except UnsatisfiableException:

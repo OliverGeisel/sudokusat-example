@@ -180,7 +180,15 @@ def write_cnf_file_list_join_interpolation_map(clauses: dict, output_file_name, 
 def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, ) -> int:
     start = time.perf_counter()
     back = len(clauses)
-    path = name
+    path = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], name)
+    try:
+        if not os.path.exists("tmp"):
+            os.mkdir("tmp")
+        sub_dir = os.path.join("tmp", os.path.splitext(info.input_file_name)[0])
+        if not os.path.exists(sub_dir):
+            os.mkdir(sub_dir)
+    except FileExistsError:
+        pass
     info.temp_files.append(path)
     lines_to_write = list()
     with open(path, "w") as temp_file:
@@ -195,7 +203,15 @@ def write_temp_cnf_file_multiple(clauses, info: PuzzleInfoEncode, name: str, tem
                                  *extra_clauses) -> int:
     start = time.perf_counter()
     back = len(clauses)
-    path = os.path.join(info.input_file_path, name)
+    path = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], name)
+    try:
+        if not os.path.exists("tmp"):
+            os.mkdir("tmp")
+        sub_dir = os.path.join("tmp", os.path.splitext(info.input_file_name)[0])
+        if not os.path.exists(sub_dir):
+            os.mkdir(sub_dir)
+    except FileExistsError:
+        pass
     info.temp_files.append(path)
     lines_to_write = list()
     lines_to_write.extend(template(clauses))
