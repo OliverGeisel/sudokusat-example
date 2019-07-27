@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -8,9 +9,14 @@ import time
 from my_solver.oliver.decoder import Decoder
 from my_solver.oliver.encoder.EncoderList import EncoderList
 from my_solver.oliver.reader import Input
+from my_solver.oliver.util import signal as sig
 
 
 def main(*args):
+    # SETUP SIGNAL HANDLING
+    signal.signal(signal.SIGTERM, sig.handler)
+    signal.signal(signal.SIGINT, sig.handler)
+
     puzzle_path = os.path.abspath(args[1])
     solver_name = args[2]
 
