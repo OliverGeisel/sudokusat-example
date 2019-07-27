@@ -30,9 +30,9 @@ def main(*args):
     print(f"Time to encode to SAT: {time_to_encode}s", file=sys.stderr)
 
     if solver_name.lower() == "riss":
-        path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/riss"))
+        path_to_solver = "riss"
     else:
-        path_to_solver = os.path.abspath(os.path.join(os.path.dirname(args[0]), "env/bin/clasp.exe"))
+        path_to_solver = "clasp"
     input_file = encode_info.output_file_name
     output_file = encode_info.SAT_solution_file_name
 

@@ -180,7 +180,7 @@ def write_cnf_file_list_join_interpolation_map(clauses: dict, output_file_name, 
 def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, ) -> int:
     start = time.perf_counter()
     back = len(clauses)
-    path = os.path.join(info.input_file_path, name)
+    path = name
     info.temp_files.append(path)
     lines_to_write = list()
     with open(path, "w") as temp_file:
