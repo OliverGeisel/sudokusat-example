@@ -58,7 +58,7 @@ def create_sep_line(info: PuzzleInfo) -> str:
 
 def decode(encode_info: PuzzleInfoEncode) -> None:
     info = PuzzleInfoOutput(encode_info)
-    path = os.path.join("tmp", os.path.splitext(encode_info.input_file_name)[0], info.input_file_name)
+    path = os.path.join("tmp", info.task, info.input_file_name)
     try:
         filled_sudoku = read_source(path, info)
     except UnsatisfiableException:
@@ -104,6 +104,7 @@ def add_horizontal_lines(info, output_field):
 
 
 def write_solution_file(info, main_output):
-    with open(info.output_file_name, "w") as output:
+    output_file_path = os.path.join("tmp", info.task, info.output_file_name)
+    with open(output_file_path, "w") as output:
         output.writelines(info.text)
         output.writelines(main_output)

@@ -180,7 +180,7 @@ def write_cnf_file_list_join_interpolation_map(clauses: dict, output_file_name, 
 def write_temp_cnf_file(clauses, info: PuzzleInfoEncode, name: str, template, ) -> int:
     start = time.perf_counter()
     back = len(clauses)
-    path = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], name)
+    path = os.path.join("tmp", info.task)
     try:
         if not os.path.exists("tmp"):
             os.mkdir("tmp")
@@ -207,7 +207,7 @@ def write_temp_cnf_file_multiple(clauses, info: PuzzleInfoEncode, name: str, tem
     try:
         if not os.path.exists("tmp"):
             os.mkdir("tmp")
-        sub_dir = os.path.join("tmp", os.path.splitext(info.input_file_name)[0])
+        sub_dir = os.path.join("tmp", info.task)
         if not os.path.exists(sub_dir):
             os.mkdir(sub_dir)
     except FileExistsError:

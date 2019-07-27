@@ -243,7 +243,7 @@ class EncoderList:
         try:
             if not os.path.exists("tmp"):
                 os.mkdir("tmp")
-            sub_dir = os.path.join("tmp", os.path.splitext(self.info.input_file_name)[0])
+            sub_dir = os.path.join("tmp", self.info.task)
             if not os.path.exists(sub_dir):
                 os.mkdir(sub_dir)
         except FileExistsError:

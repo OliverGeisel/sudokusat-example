@@ -12,6 +12,7 @@ class PuzzleInfo:
         self.text = text  # further information
         self.values = list(range(1, length + 1))
         self.values_zero = list(range(length))
+        self.task = os.path.splitext(self.input_file_name)[0]
 
     def input_file_complete_absolute(self):
         return os.path.join(self.input_file_path, self.input_file_name)
@@ -59,6 +60,7 @@ class PuzzleInfoOutput(PuzzleInfo):
         self.output_file_path = self.input_file_path
         self.input_file_name = encode_info.SAT_solution_file_name
         self.output_file_name = encode_info.SAT_solution_file_name.replace("-SAT-sol.txt", "-solution.txt")
+        self.task = encode_info.task
 
     def output_file_complete_absolute(self):
         return os.path.join(self.output_file_path, self.output_file_name)
