@@ -37,19 +37,17 @@ def main(*args):
     if solver_name.lower() == "riss":
         path_to_solver = "riss"
     else:
-        path_to_solver = "env\\bin\\clasp"
-    cnf_file = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], encode_info.output_file_name)
-    output_file = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], encode_info.SAT_solution_file_name)
+        path_to_solver = "clasp"
+    cnf_file = os.path.join("tmp", info.task, encode_info.output_file_name)
+    output_file = os.path.join("tmp", info.task, encode_info.SAT_solution_file_name)
     start = time.perf_counter()
-
-    solver_process = subprocess.Popen([path_to_solver, cnf_file], stdout=subprocess.PIPE)
-    if solver_process.poll():
-        solver_process.wait()
     with open(output_file, "wb") as output_SAT:
+        solver_process = subprocess.Popen([path_to_solver, cnf_file], stdout=subprocess.PIPE)
+        if solver_process.poll():
+            solver_process.wait()
         output_SAT.write(solver_process.stdout.read())
-    end = time.perf_counter()
-    print(f"Finish solving in {end - start}s", file=sys.stderr)
-
+        end = time.perf_counter()
+        print(f"Finish solving in {end - start}s", file=sys.stderr)
     start = time.perf_counter()
     Decoder.decode(encode_info)
     end = time.perf_counter()

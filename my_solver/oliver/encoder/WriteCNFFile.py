@@ -10,11 +10,11 @@ empty = ""
 size_of_deletion = -256
 
 
-def unit_template_function(temp_clauses):
+def unit_template_function(temp_clauses) -> List[str]:
     return [f"{empty if x[1] else minus}{x[0]} 0\n" for x in temp_clauses]
 
 
-def unit_template_function_delete(temp_clauses: List[List[int]]):
+def unit_template_function_delete(temp_clauses: List[List[int]]) -> List[str]:
     back = list()
     while temp_clauses:
         back.extend([f"{empty if x[1] else minus}{x[0]} 0\n" for x in temp_clauses[size_of_deletion:]])
@@ -22,11 +22,11 @@ def unit_template_function_delete(temp_clauses: List[List[int]]):
     return back
 
 
-def binary_template_function(temp_clauses):
+def binary_template_function(temp_clauses) -> List[str]:
     return [f"-{x[0]} -{x[1]} 0\n" for x in temp_clauses]
 
 
-def binary_template_function_delete(temp_clauses: List[List[int]]):
+def binary_template_function_delete(temp_clauses: List[List[int]]) -> List[str]:
     back = list()
     while temp_clauses:
         back.extend([f"-{x[0]} -{x[1]} 0\n" for x in temp_clauses[size_of_deletion:]])
@@ -34,7 +34,7 @@ def binary_template_function_delete(temp_clauses: List[List[int]]):
     return back
 
 
-def binary_template_function_percent_delete(temp_clauses: List[List[int]]):
+def binary_template_function_percent_delete(temp_clauses: List[List[int]]) -> List[str]:
     back = list()
     while temp_clauses:
         back.extend(["-%s -%s 0\n" % (str(x[0]), str(x[1])) for x in temp_clauses[size_of_deletion:]])
@@ -42,7 +42,7 @@ def binary_template_function_percent_delete(temp_clauses: List[List[int]]):
     return back
 
 
-def one_template_function(temp_clauses):
+def one_template_function(temp_clauses) -> List[str]:
     return [f"{' '.join([str(literal) for literal in clause])} 0\n" for clause in temp_clauses]
 
 

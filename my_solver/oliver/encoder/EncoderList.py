@@ -42,7 +42,7 @@ class EncoderList:
         first_pos = Position(self.info, row)
         run1 = first_pos.var
         for value in self.info.values_zero:
-            vars_in_row = range(run1 + value, run1 + self.info.square_of_length + value, self.info.length)
+            vars_in_row = range(run1 + value, run1 + self.info.square_of_length + value, length)
             to_append.extend(it.combinations(vars_in_row, 2))
 
     def distinct_column_clause_list(self, column: int) -> None:
@@ -56,7 +56,7 @@ class EncoderList:
         first_pos = Position(self.info, column=column)
         run1 = first_pos.var
         for value in self.info.values_zero:
-            vars_in_row = range(run1 + value, run1 + self.info.square_of_length * self.info.length + value,
+            vars_in_row = range(run1 + value, run1 + self.info.square_of_length * length + value,
                                 self.info.square_of_length)
             to_append.extend(it.combinations(vars_in_row, 2))
 
@@ -64,41 +64,23 @@ class EncoderList:
         step = self.info.length
         pos = Position(self.info, row)
         to_append = self.clauses["row_one"]
-        for value in self.info.values:
-            pos.set_value(value)
-            run = pos.var
-            clause = list()
-            for column in self.info.values:
-                clause.append(run)
-                run += step
-            to_append.append(clause)
+        clause = list()
+        run = pos.var
+        for column in self.info.values:
+            clause.append(run)
+            run += step
+        for value in self.info.values_zero:
+            to_append.append([variable + value for variable in clause])
 
     def only_one_solution_per_column_clause_list(self, column: int) -> None:
         pos = Position(self.info, column=column)
         step = self.info.square_of_length
         to_append = self.clauses["column_one"]
-        for value in self.info.values:
-            pos.set_value(value)
-            clause = list()
-            run = pos.var
-            for row in self.info.values:
-                clause.append(run)
-                run += step
-            to_append.append(clause)
-
-    def only_one_solution_per_block_clause_list(self, start_row, start_column) -> None:
-        sqrt_of_length = self.info.sqrt_of_length
-        pos = Position(self.info, start_row, start_column)
-        step_row = self.info.square_of_length
-        step_column = self.info.length
-        to_append = self.clauses["block_one"]
-        run = pos.var
         clause = list()
-        for row_in_block in range(start_row, start_row + sqrt_of_length):
-            for column_in_block in range(start_column, start_column + sqrt_of_length):
-                clause.append(run)
-                run += step_column
-            run += step_row - step_column * sqrt_of_length
+        run = pos.var
+        for row in self.info.values:
+            clause.append(run)
+            run += step
         for value in self.info.values_zero:
             to_append.append([variable + value for variable in clause])
 
@@ -146,7 +128,7 @@ class EncoderList:
         for value in self.info.values_zero:
             to_append.extend([[clause[0] + value, clause[1] + value] for clause in clauses])
 
-    def distinct_block_clauses_list(self, start_row, start_column) -> None:
+    def distinct_and_only_one_for_block_clauses_list(self, start_row, start_column) -> None:
         """
         Calculate all clauses for one block in puzzle
         :param start_column:
@@ -159,12 +141,23 @@ class EncoderList:
         # same for 2 to 9
         # this continue with 1.2 2 by ...
         sqrt_of_length = self.info.sqrt_of_length
+        step_row = self.info.square_of_length
+        step_column = self.info.length
+        run = Position(self.info, start_row, start_column).var
+        clause = list()
+        to_append = self.clauses["block_one"]
         # for one pos in block
-        for line in range(start_row, start_row + sqrt_of_length - 1):
+        for line in range(start_row, start_row + sqrt_of_length):
             row_in_block = (line - 1) % sqrt_of_length + 1
             for cell in range(start_column, start_column + sqrt_of_length):
-                column_in_block = (cell - 1) % sqrt_of_length + 1
-                self.calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, start_row, start_column)
+                if line < start_row + sqrt_of_length:
+                    column_in_block = (cell - 1) % sqrt_of_length + 1
+                    self.calc_clauses_for_cell_in_block_list(row_in_block, column_in_block, start_row, start_column)
+                clause.append(run)
+                run += step_column
+            run += step_row - step_column * sqrt_of_length
+        for value in self.info.values_zero:
+            to_append.append([variable + value for variable in clause])
 
     def calc_block_clauses_list(self) -> None:
         start = time.perf_counter()
@@ -172,8 +165,7 @@ class EncoderList:
         for block in range(self.info.length):
             start_row = int(block / blocks_in_row) * self.info.sqrt_of_length + 1
             start_column = (block % blocks_in_row) * self.info.sqrt_of_length + 1
-            self.distinct_block_clauses_list(start_row, start_column)
-            self.only_one_solution_per_block_clause_list(start_row, start_column)
+            self.distinct_and_only_one_for_block_clauses_list(start_row, start_column)
         end = time.perf_counter()
         time_to_encode = end - start
         print(f"Finish block! Time: {time_to_encode}s", file=sys.stderr)
@@ -198,33 +190,23 @@ class EncoderList:
 
     def calc_cell_clauses_list(self, field) -> None:
         start = time.perf_counter()
-        pos = Position(self.info)
+        run = 0
+        step_column = self.info.length
         append_to_unit = self.clauses["unit"]
-        append_to_one = self.clauses["one"]
-        append_to_dist = self.clauses["dist"]
         for row_count, row in enumerate(field):
             row_count += 1
-            pos.set_row(row_count)
             for cell_count, cell in enumerate(row):
                 cell_count += 1
-                pos.set_column(cell_count)
                 if cell != 0:
                     # add known values to unit_clause
-                    pos.set_value(cell)
-                    u_clause = pos.var
-                    append_to_unit.append([u_clause, 1])
-                    u_clause -= (cell - 1)
                     for value in self.info.values:
-                        if value == cell:
-                            pass
-                        else:
-                            append_to_unit.append([u_clause, 0])
-                        u_clause += 1
+                        run += 1
+                        append_to_unit.append([run, 1 if value == cell else 0])
                 else:
                     # if not known add at least and exactly one value clauses to formula
                     self.one_value_per_cell_clause_list(row_count, cell_count)
                     self.only_one_value_per_cell_list(row_count, cell_count)
-
+                    run += step_column
         end = time.perf_counter()
         time_to_encode = end - start
         print(f"Finish cell! Time: {time_to_encode}s", file=sys.stderr)
@@ -232,8 +214,7 @@ class EncoderList:
     def encode(self, field: List[List[int]], info_input: PuzzleInfoInput) -> PuzzleInfoEncode:
         self.info = PuzzleInfoEncode(info_input.input_file_complete_absolute(), info_input.length, info_input.text)
         # add clauses for at least one possible value in each cell
-        self.calc_cell_clauses_list(field)
-        field.clear()
+
         sum_of_clauses = 0
         output_file_path = os.path.join("tmp", self.info.task, self.info.output_file_name)
         try:
@@ -249,6 +230,8 @@ class EncoderList:
             output_line = list()
 
             # add clauses for one cell
+            self.calc_cell_clauses_list(field)
+            field.clear()
             if self.info.length >= self.large_size:
                 extra = [[self.clauses["dist"], binary_template_function], [self.clauses["one"], one_template_function]]
                 sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["unit"], self.info, "cell.txt",

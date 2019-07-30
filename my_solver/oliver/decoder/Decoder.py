@@ -72,15 +72,15 @@ def decode(encode_info: PuzzleInfoEncode) -> None:
 
 
 def read_source(source_path: str, info: PuzzleInfoOutput) -> List[str]:
-    with open(source_path) as solution:
+    with open(source_path, "r") as solution:
         content = solution.readlines()
 
-        satisfiable = [x for x in content if x[0] == "s"][0]
-        if "UNSATISFIABLE".lower() in satisfiable.lower():
-            write_solution_file(info, "NO Solution\n")
-            raise UnsatisfiableException
-        if "UNKNOWN" in satisfiable:
-            raise RuntimeError
+    satisfiable = [x for x in content if x[0] == "s"][0]
+    if "UNSATISFIABLE".lower() in satisfiable.lower():
+        write_solution_file(info, "NO Solution\n")
+        raise UnsatisfiableException
+    if "UNKNOWN" in satisfiable:
+        raise RuntimeError
     #  remove 'v'
     var_lines = [x for x in content if x[0] == "v"]
     var_lines = list(map(lambda x: x.replace("v ", ""), var_lines))
