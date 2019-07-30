@@ -37,7 +37,7 @@ def main(*args):
     if solver_name.lower() == "riss":
         path_to_solver = "riss"
     else:
-        path_to_solver = "clasp"
+        path_to_solver = "env\\bin\\clasp"
     cnf_file = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], encode_info.output_file_name)
     output_file = os.path.join("tmp", os.path.splitext(info.input_file_name)[0], encode_info.SAT_solution_file_name)
     start = time.perf_counter()

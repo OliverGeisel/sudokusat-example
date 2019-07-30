@@ -20,20 +20,16 @@ class EncoderList:
         self.info = info
         self.clauses = defaultdict(lambda: list())
 
-    def distinct_column_clause_list(self, column: int) -> None:
-        """  Create the clauses, that describe, that one column has every value exactly once
+    def one_value_per_cell_clause_list(self, row_count: int, cell_count: int) -> None:
+        pos = Position(self.info, row_count, cell_count)
+        run = pos.var
+        self.clauses["one"].append([run + value for value in self.info.values_zero])
 
-        :param column: column that get the clauses.
-        :return: clauses for the column as list
-        """
-        length = self.info.length
-        to_append = self.clauses["column"]
-        first_pos = Position(self.info, column=column)
+    def only_one_value_per_cell_list(self, row: int, column: int) -> None:
+        first_pos = Position(self.info, row, column)
         run1 = first_pos.var
-        for value in self.info.values_zero:
-            vars_in_row = range(run1 + value, run1 + self.info.square_of_length * self.info.length + value,
-                                self.info.square_of_length)
-            to_append.extend(it.combinations(vars_in_row, 2))
+        vars_for_cell = range(run1, run1 + self.info.length)
+        self.clauses["dist"].extend(it.combinations(vars_for_cell, 2))
 
     def distinct_row_clause_list(self, row: int) -> None:
         """
@@ -49,18 +45,20 @@ class EncoderList:
             vars_in_row = range(run1 + value, run1 + self.info.square_of_length + value, self.info.length)
             to_append.extend(it.combinations(vars_in_row, 2))
 
-    def one_value_per_cell_clause_list(self, row_count: int, cell_count: int) -> List[int]:
-        pos = Position(self.info, row_count, cell_count)
-        run = pos.var
-        return [run + value - 1 for value in self.info.values]
+    def distinct_column_clause_list(self, column: int) -> None:
+        """  Create the clauses, that describe, that one column has every value exactly once
 
-    def exactly_one_value_per_cell_list(self, row: int, column: int) -> List[List[int]]:
-        exactly_one_value_per_cell_clause = list()
-        first_pos = Position(self.info, row, column)
+        :param column: column that get the clauses.
+        :return: clauses for the column as list
+        """
+        length = self.info.length
+        to_append = self.clauses["column"]
+        first_pos = Position(self.info, column=column)
         run1 = first_pos.var
-        vars_for_cell = range(run1, run1 + self.info.length)
-        exactly_one_value_per_cell_clause.extend(it.combinations(vars_for_cell, 2))
-        return exactly_one_value_per_cell_clause
+        for value in self.info.values_zero:
+            vars_in_row = range(run1 + value, run1 + self.info.square_of_length * self.info.length + value,
+                                self.info.square_of_length)
+            to_append.extend(it.combinations(vars_in_row, 2))
 
     def only_one_solution_per_row_clause_list(self, row: int) -> None:
         step = self.info.length
@@ -88,22 +86,21 @@ class EncoderList:
                 run += step
             to_append.append(clause)
 
-    def only_one_solution_per_block_clause_list(self, start_row, start_column) -> List[List[int]]:
-        back = list()
+    def only_one_solution_per_block_clause_list(self, start_row, start_column) -> None:
         sqrt_of_length = self.info.sqrt_of_length
         pos = Position(self.info, start_row, start_column)
-        step = self.info.square_of_length
-        for value in self.info.values:
-            pos.set_value(value)
-            clause = list()
-            for row_in_block in range(start_row, start_row + sqrt_of_length):
-                pos.set_row(row_in_block)
-                run = pos.var
-                for column_in_block in range(start_column, start_column + sqrt_of_length):
-                    clause.append(run)
-                    run += step
-            back.append(clause)
-        return back
+        step_row = self.info.square_of_length
+        step_column = self.info.length
+        to_append = self.clauses["block_one"]
+        run = pos.var
+        clause = list()
+        for row_in_block in range(start_row, start_row + sqrt_of_length):
+            for column_in_block in range(start_column, start_column + sqrt_of_length):
+                clause.append(run)
+                run += step_column
+            run += step_row - step_column * sqrt_of_length
+        for value in self.info.values_zero:
+            to_append.append([variable + value for variable in clause])
 
     def calc_clauses_for_cell_in_block_list(self, row_in_block, column_in_block, start_row_of_block,
                                             start_column_of_block) -> None:
@@ -225,10 +222,9 @@ class EncoderList:
                         u_clause += 1
                 else:
                     # if not known add at least and exactly one value clauses to formula
-                    clause = self.one_value_per_cell_clause_list(row_count, cell_count)
-                    append_to_one.append(clause)
-                    cell_clauses = self.exactly_one_value_per_cell_list(row_count, cell_count)
-                    append_to_dist.extend(cell_clauses)
+                    self.one_value_per_cell_clause_list(row_count, cell_count)
+                    self.only_one_value_per_cell_list(row_count, cell_count)
+
         end = time.perf_counter()
         time_to_encode = end - start
         print(f"Finish cell! Time: {time_to_encode}s", file=sys.stderr)
@@ -239,7 +235,7 @@ class EncoderList:
         self.calc_cell_clauses_list(field)
         field.clear()
         sum_of_clauses = 0
-        output_file = os.path.join("tmp", os.path.splitext(self.info.input_file_name)[0], self.info.output_file_name)
+        output_file_path = os.path.join("tmp", self.info.task, self.info.output_file_name)
         try:
             if not os.path.exists("tmp"):
                 os.mkdir("tmp")
@@ -248,8 +244,11 @@ class EncoderList:
                 os.mkdir(sub_dir)
         except FileExistsError:
             pass
-        with open(output_file, "w") as output:
+
+        with open(output_file_path, "w") as output:
             output_line = list()
+
+            # add clauses for one cell
             if self.info.length >= self.large_size:
                 extra = [[self.clauses["dist"], binary_template_function], [self.clauses["one"], one_template_function]]
                 sum_of_clauses += write_temp_cnf_file_multiple(self.clauses["unit"], self.info, "cell.txt",
@@ -305,16 +304,10 @@ class EncoderList:
 
             start = time.perf_counter()
             if self.info.length >= self.large_size:
-                write_cnf_file_from_parts(self.info.temp_files, output_file, start_line, *extra)
+                write_cnf_file_from_parts(self.info.temp_files, output_file_path, start_line, *extra)
             else:
                 output_line.insert(0, start_line)
-                output.writelines(output_line)
-                # with open(output_file, "w")as output_file:
-                #     lines_to_write = [start_line]
-                #     lines_to_write.extend(solution_strs)
-                #     write = ''.join(lines_to_write)
-                #     output_file.write(write)
-                #  write_cnf_file_list_join_interpolation_map(self.clauses, output_file, start_line)
+                output.write("".join(output_line))
         end = time.perf_counter()
         time_to_encode = end - start
         print(f"Time to write CNF-File: {time_to_encode}s", file=sys.stderr)
